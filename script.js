@@ -8,12 +8,12 @@ const VALID_USERS = [
 
 // Dane aut
 const CARS = [
-    { id: "Auto1", name: "Skoda Octavia 1", plate: "RZ 12345" },
-    { id: "Auto2", name: "Skoda Octavia 2", plate: "RZ 23456" },
-    { id: "Auto3", name: "Skoda Octavia 3", plate: "RZ 34567" },
-    { id: "Auto4", name: "Skoda Superb", plate: "RZ 45678" },
-    { id: "Auto5", name: "Hyundai Tucson 1", plate: "RZ 56789" },
-    { id: "Auto6", name: "Hyundai Tucson 2", plate: "RZ 67890" }
+    { id: "Auto1", name: "Toyota Corolla", plate: "KR 12345" },
+    { id: "Auto2", name: "Volkswagen Passat", plate: "KR 23456" },
+    { id: "Auto3", name: "Skoda Octavia", plate: "KR 34567" },
+    { id: "Auto4", name: "Ford Focus", plate: "KR 45678" },
+    { id: "Auto5", name: "Opel Astra", plate: "KR 56789" },
+    { id: "Auto6", name: "Hyundai i30", plate: "KR 67890" }
 ];
 
 // URL Google Apps Script (do zastąpienia własnym)
@@ -24,6 +24,7 @@ let currentUser = null;
 let selectedCar = null;
 let flatpickrInstance = null;
 let reservations = [];
+let editingReservationId = null;
 
 // Funkcje pomocnicze
 function getCurrentUser() {
@@ -51,6 +52,10 @@ function showMessage(elementId, message, type = "info") {
             messageElement.style.display = 'none';
         }, 5000);
     }
+}
+
+function generateReservationId() {
+    return 'RES-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 }
 
 // Obsługa logowania
@@ -113,6 +118,7 @@ if (document.getElementById('employeeName')) {
         // Dodaj link do panelu administracyjnego dla admina
         if (user.role === 'admin' || user.login === 'admin') {
             addAdminPanelLink();
+            addReservationsManagementLink();
         }
         
         // Inicjalizuj kalendarz
@@ -173,7 +179,23 @@ function addAdminPanelLink() {
     }
 }
 
-// Inicjalizacja kalendarza
+// Dodaj link do zarządzania rezerwacjami dla administratorów
+function addReservationsManagementLink() {
+    const userInfo = document.querySelector('.user-info');
+    if (userInfo) {
+        const reservationsLink = document.createElement('a');
+        reservationsLink.href = 'reservations-management.html';
+        reservationsLink.innerHTML = '<i class="fas fa-calendar-alt"></i> Zarządzaj rezerwacjami';
+        reservationsLink.className = 'btn-admin';
+        reservationsLink.style.marginLeft = '10px';
+        reservationsLink.style.padding = '8px 15px';
+        reservationsLink.style.fontSize = '14px';
+        reservationsLink.style.backgroundColor = '#9b59b6';
+        userInfo.appendChild(reservationsLink);
+    }
+}
+
+// Inicjalizacja kalendarza - POPRAWIONA WERSJA
 function initCalendar() {
     flatpickrInstance = flatpickr("#reservationDates", {
         mode: "range",
@@ -182,6 +204,8 @@ function initCalendar() {
         minDate: "today",
         maxDate: new Date().fp_incr(90), // 90 dni do przodu
         disableMobile: true,
+        allowInput: false,
+        clickOpens: true,
         onChange: function(selectedDates, dateStr, instance) {
             if (selectedDates.length === 2) {
                 const startDate = selectedDates[0];
@@ -192,8 +216,29 @@ function initCalendar() {
                 if (diffDays > 7) {
                     showMessage('message', 'Możesz zarezerwować auto maksymalnie na 7 dni', 'error');
                     instance.clear();
+                    return;
                 }
+                
+                // Upewnij się, że daty są ustawione poprawnie
+                console.log('Wybrane daty:', startDate.toISOString().split('T')[0], 'do', endDate.toISOString().split('T')[0]);
             }
+        },
+        onReady: function(selectedDates, dateStr, instance) {
+            // Dodaj obsługę manualnego wprowadzania dat
+            const input = instance.input;
+            input.addEventListener('blur', function() {
+                const value = this.value;
+                if (value) {
+                    const dates = value.split(' do ');
+                    if (dates.length === 2) {
+                        const startDate = instance.parseDate(dates[0], 'Y-m-d');
+                        const endDate = instance.parseDate(dates[1], 'Y-m-d');
+                        if (startDate && endDate) {
+                            instance.setDate([startDate, endDate], true);
+                        }
+                    }
+                }
+            });
         }
     });
 }
@@ -203,7 +248,7 @@ function updateCalendarAvailability() {
     if (!selectedCar || !flatpickrInstance) return;
     
     // Pobierz rezerwacje dla wybranego auta
-    const carReservations = reservations.filter(r => r.carId === selectedCar);
+    const carReservations = reservations.filter(r => r.carId === selectedCar && r.id !== editingReservationId);
     
     // Utwórz tablicę z zajętymi datami
     const disabledDates = [];
@@ -226,31 +271,56 @@ function updateCalendarAvailability() {
 
 // Ładowanie rezerwacji
 function loadReservations() {
-    // W rzeczywistości pobieranie z Google Sheets przez Google Apps Script
-    // Tutaj symulujemy dane
-    reservations = [
-        {
-            carId: "Auto1",
-            carName: "Toyota Corolla",
-            employeeName: "Jan Kowalski",
-            department: "IT",
-            startDate: "2023-10-15",
-            endDate: "2023-10-17",
-            purpose: "Wyjazd służbowy do klienta"
-        },
-        {
-            carId: "Auto3",
-            carName: "Skoda Octavia",
-            employeeName: "Anna Nowak",
-            department: "Marketing",
-            startDate: "2023-10-20",
-            endDate: "2023-10-22",
-            purpose: "Targi branżowe"
-        }
-    ];
+    // Sprawdź czy istnieją zapisane rezerwacje w localStorage
+    const savedReservations = localStorage.getItem('carReservations');
+    
+    if (savedReservations) {
+        reservations = JSON.parse(savedReservations);
+    } else {
+        // Użyj domyślnych rezerwacji
+        reservations = [
+            {
+                id: generateReservationId(),
+                carId: "Auto1",
+                carName: "Toyota Corolla",
+                employeeName: "Jan Kowalski",
+                department: "IT",
+                startDate: getDateString(5), // 5 dni od teraz
+                endDate: getDateString(7),   // 7 dni od teraz
+                purpose: "Wyjazd służbowy do klienta",
+                bookingDate: getDateString(0),
+                login: "pracownik1"
+            },
+            {
+                id: generateReservationId(),
+                carId: "Auto3",
+                carName: "Skoda Octavia",
+                employeeName: "Anna Nowak",
+                department: "Marketing",
+                startDate: getDateString(10), // 10 dni od teraz
+                endDate: getDateString(12),   // 12 dni od teraz
+                purpose: "Targi branżowe",
+                bookingDate: getDateString(0),
+                login: "pracownik2"
+            }
+        ];
+        saveReservationsToStorage();
+    }
     
     updateCarAvailabilityDisplay();
     updateUserReservationsDisplay();
+}
+
+// Zapisz rezerwacje do localStorage
+function saveReservationsToStorage() {
+    localStorage.setItem('carReservations', JSON.stringify(reservations));
+}
+
+// Pomocnicza funkcja do generowania dat
+function getDateString(daysFromNow) {
+    const date = new Date();
+    date.setDate(date.getDate() + daysFromNow);
+    return date.toISOString().split('T')[0];
 }
 
 // Wyświetlanie dostępności aut
@@ -307,7 +377,7 @@ function updateUserReservationsDisplay() {
     const container = document.getElementById('userReservations');
     container.innerHTML = '';
     
-    const userReservations = reservations.filter(r => r.employeeName === user.name);
+    const userReservations = reservations.filter(r => r.login === user.login);
     
     if (userReservations.length === 0) {
         container.innerHTML = '<p>Nie masz żadnych rezerwacji.</p>';
@@ -319,6 +389,20 @@ function updateUserReservationsDisplay() {
         const reservationElement = document.createElement('div');
         reservationElement.className = 'reservation-item';
         
+        let actionsHtml = '';
+        if (user.role === 'admin' || user.login === 'admin') {
+            actionsHtml = `
+                <div class="reservation-actions">
+                    <button class="btn-edit-small" onclick="editUserReservation('${reservation.id}')">
+                        <i class="fas fa-edit"></i> Edytuj
+                    </button>
+                    <button class="btn-delete-small" onclick="deleteUserReservation('${reservation.id}')">
+                        <i class="fas fa-trash"></i> Usuń
+                    </button>
+                </div>
+            `;
+        }
+        
         reservationElement.innerHTML = `
             <h5>${car ? car.name : reservation.carId}</h5>
             <div class="reservation-dates">
@@ -327,10 +411,75 @@ function updateUserReservationsDisplay() {
             <div class="reservation-purpose">
                 <i class="fas fa-clipboard-list"></i> ${reservation.purpose}
             </div>
+            ${actionsHtml}
         `;
         
         container.appendChild(reservationElement);
     });
+}
+
+// Edycja rezerwacji użytkownika (dla admina)
+function editUserReservation(reservationId) {
+    const reservation = reservations.find(r => r.id === reservationId);
+    if (!reservation) return;
+    
+    // Wypełnij formularz danymi rezerwacji
+    document.getElementById('employeeName').value = reservation.employeeName;
+    document.getElementById('employeeDepartment').value = reservation.department;
+    document.getElementById('carSelect').value = reservation.carId;
+    document.getElementById('purpose').value = reservation.purpose;
+    
+    // Ustaw wybrane auto
+    selectedCar = reservation.carId;
+    document.getElementById('calendarSection').classList.remove('hidden');
+    
+    // Ustaw daty w kalendarzu
+    const startDate = new Date(reservation.startDate);
+    const endDate = new Date(reservation.endDate);
+    
+    // Ustawienie dat w flatpickr
+    flatpickrInstance.setDate([startDate, endDate], true);
+    
+    // Ustaw tryb edycji
+    editingReservationId = reservationId;
+    
+    // Zmień tekst przycisku
+    const submitBtn = document.querySelector('.btn-submit');
+    submitBtn.innerHTML = '<i class="fas fa-save"></i> Zaktualizuj rezerwację';
+    
+    // Zaktualizuj dostępność kalendarza
+    updateCalendarAvailability();
+    
+    // Przewiń do formularza
+    document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+    
+    showMessage('message', 'Edytujesz rezerwację. Możesz zmienić dane i zapisać zmiany.', 'info');
+}
+
+// Usuwanie rezerwacji użytkownika (dla admina)
+function deleteUserReservation(reservationId) {
+    if (!confirm('Czy na pewno chcesz usunąć tę rezerwację?')) return;
+    
+    const user = getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.login !== 'admin')) {
+        showMessage('message', 'Brak uprawnień do usuwania rezerwacji', 'error');
+        return;
+    }
+    
+    const index = reservations.findIndex(r => r.id === reservationId);
+    if (index !== -1) {
+        reservations.splice(index, 1);
+        saveReservationsToStorage();
+        
+        updateCarAvailabilityDisplay();
+        updateUserReservationsDisplay();
+        
+        if (selectedCar) {
+            updateCalendarAvailability();
+        }
+        
+        showMessage('message', 'Rezerwacja została usunięta', 'success');
+    }
 }
 
 // Formatowanie daty
@@ -370,8 +519,8 @@ function submitReservation() {
         return;
     }
     
-    // Sprawdź czy auto jest dostępne w wybranym okresie
-    const carReservations = reservations.filter(r => r.carId === selectedCar);
+    // Sprawdź czy auto jest dostępne w wybranym okresie (pomiń bieżącą rezerwację jeśli edytujemy)
+    const carReservations = reservations.filter(r => r.carId === selectedCar && r.id !== editingReservationId);
     const isAvailable = carReservations.every(reservation => {
         const resStart = new Date(reservation.startDate);
         const resEnd = new Date(reservation.endDate);
@@ -387,6 +536,7 @@ function submitReservation() {
     
     // Przygotuj dane rezerwacji
     const reservationData = {
+        id: editingReservationId || generateReservationId(),
         carId: selectedCar,
         carName: CARS.find(c => c.id === selectedCar).name,
         employeeName: document.getElementById('employeeName').value,
@@ -395,37 +545,50 @@ function submitReservation() {
         endDate: endDate.toISOString().split('T')[0],
         purpose: document.getElementById('purpose').value,
         bookingDate: new Date().toISOString().split('T')[0],
-        login: user.login
+        login: editingReservationId ? reservations.find(r => r.id === editingReservationId)?.login : user.login
     };
     
-    // Wysłanie danych do Google Sheets (symulacja)
-    sendReservationToGoogleSheets(reservationData);
+    if (editingReservationId) {
+        // Aktualizuj istniejącą rezerwację
+        const index = reservations.findIndex(r => r.id === editingReservationId);
+        if (index !== -1) {
+            reservations[index] = reservationData;
+        }
+    } else {
+        // Dodaj nową rezerwację
+        reservations.push(reservationData);
+    }
+    
+    saveReservationsToStorage();
+    
+    showMessage('message', editingReservationId ? 'Rezerwacja została zaktualizowana!' : 'Rezerwacja została zapisana!', 'success');
+    
+    // Zresetuj formularz
+    resetReservationForm();
+    
+    // Odśwież wyświetlane dane
+    updateCarAvailabilityDisplay();
+    updateUserReservationsDisplay();
+    updateCalendarAvailability();
+    
+    // Aktualizuj datę ostatniej aktualizacji
+    document.getElementById('lastUpdate').textContent = 
+        `Ostatnia aktualizacja: ${new Date().toLocaleString('pl-PL')}`;
 }
 
-// Wysyłanie rezerwacji do Google Sheets
-function sendReservationToGoogleSheets(reservationData) {
-    // Symulacja pomyślnego zapisu
-    setTimeout(() => {
-        showMessage('message', 'Rezerwacja została zapisana!', 'success');
-        
-        // Dodaj rezerwację do lokalnej listy
-        reservations.push(reservationData);
-        updateCarAvailabilityDisplay();
-        updateUserReservationsDisplay();
-        updateCalendarAvailability();
-        
-        // Wyczyść formularz
-        document.getElementById('reservationForm').reset();
-        document.getElementById('employeeName').value = currentUser.name;
-        document.getElementById('calendarSection').classList.add('hidden');
-        document.getElementById('carSelect').value = '';
-        selectedCar = null;
-        flatpickrInstance.clear();
-        
-        // Aktualizuj datę ostatniej aktualizacji
-        document.getElementById('lastUpdate').textContent = 
-            `Ostatnia aktualizacja: ${new Date().toLocaleString('pl-PL')}`;
-    }, 1000);
+// Resetowanie formularza rezerwacji
+function resetReservationForm() {
+    document.getElementById('reservationForm').reset();
+    document.getElementById('employeeName').value = currentUser.name;
+    document.getElementById('calendarSection').classList.add('hidden');
+    document.getElementById('carSelect').value = '';
+    selectedCar = null;
+    flatpickrInstance.clear();
+    editingReservationId = null;
+    
+    // Przywróć domyślny tekst przycisku
+    const submitBtn = document.querySelector('.btn-submit');
+    submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Zatwierdź rezerwację';
 }
 
 // Ładowanie danych z Google Sheets
@@ -435,5 +598,4 @@ function loadDataFromGoogleSheets() {
         document.getElementById('lastUpdate').textContent = 
             `Ostatnia aktualizacja: ${new Date().toLocaleString('pl-PL')}`;
     }, 30000);
-
 }
