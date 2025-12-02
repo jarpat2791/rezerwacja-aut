@@ -1706,11 +1706,101 @@ footer p {
     background: #4CAF50 !important;
     border-color: #4CAF50 !important;
 }
+/* Style dla zajętych dat w kalendarzu */
+.unavailable-date {
+    background-color: #ff6b6b !important;
+    color: white !important;
+    border-color: #ff6b6b !important;
+    cursor: not-allowed !important;
+}
 
+.unavailable-date:hover {
+    background-color: #ff5252 !important;
+}
+
+.unavailable-date:after {
+    content: '🚫';
+    position: absolute;
+    font-size: 10px;
+    bottom: 2px;
+    right: 2px;
+}
+
+/* Informacje o dostępności */
+.availability-info {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+    border-left: 4px solid #3498db;
+}
+
+.availability-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.availability-message i {
+    color: #3498db;
+}
+
+.availability-message.available i {
+    color: #27ae60;
+}
+
+/* Poprawki dla kalendarza */
+.flatpickr-day.disabled {
+    color: #ccc !important;
+    cursor: not-allowed !important;
+}
+
+.flatpickr-day.unavailable-date.disabled {
+    background-color: #ffcccc !important;
+}
+
+/* Tooltip dla zajętych dat */
+.flatpickr-day[title] {
+    position: relative;
+}
+
+.flatpickr-day[title]:hover:after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    margin-bottom: 5px;
+}
+
+/* Komunikat o konflikcie */
+.conflict-message {
+    background-color: #ffeaa7;
+    border: 1px solid #fdcb6e;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0;
+    font-size: 14px;
+}
+
+.conflict-message i {
+    color: #e17055;
+    margin-right: 8px;
+}
 /* ===== DODATKOWE POPRAWKI DLA KALENDARZA ===== */
 .flatpickr-calendar.monthMode {
     width: 100% !important;
     max-width: 800px !important;
     margin: 0 auto !important;
 }
+
+
 
