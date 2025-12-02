@@ -1,19 +1,19 @@
 // Dane logowania (w rzeczywistości należy użyć bezpiecznego systemu uwierzytelniania)
 const VALID_USERS = [
-    { login: "pracownik1", password: "haslo123", name: "Jan Kowalski", role: "user" },
-    { login: "pracownik2", password: "haslo456", name: "Anna Nowak", role: "user" },
-    { login: "pracownik3", password: "haslo789", name: "Piotr Wiśniewski", role: "user" },
-    { login: "admin", password: "admin123", name: "Administrator", role: "admin" }
+    { login: "pracownik1", password: "haslo123", name: "Jan Kowalski", role: "user", email: "jan.kowalski@firma.pl" },
+    { login: "pracownik2", password: "haslo456", name: "Anna Nowak", role: "user", email: "anna.nowak@firma.pl" },
+    { login: "pracownik3", password: "haslo789", name: "Piotr Wiśniewski", role: "user", email: "piotr.wisniewski@firma.pl" },
+    { login: "admin", password: "admin123", name: "Administrator", role: "admin", email: "admin@firma.pl" }
 ];
 
 // Dane aut
 const CARS = [
-    { id: "Auto1", name: "Skoda Octavia 1", plate: "RZ 12345" },
-    { id: "Auto2", name: "Skoda Octavia 2", plate: "RZ 23456" },
-    { id: "Auto3", name: "Skoda Octavia 3", plate: "RZ 34567" },
-    { id: "Auto4", name: "Skoda Superb", plate: "RZ 45678" },
-    { id: "Auto5", name: "Hyundai Tucson 1", plate: "RZ 56789" },
-    { id: "Auto6", name: "Hyundai Tucson 2", plate: "RZ 67890" }
+    { id: "Auto1", name: "Skoda Octavia 1", plate: "RZ 12345", type: "osobowe" },
+    { id: "Auto2", name: "Skoda Octavia 2", plate: "RZ 23456", type: "osobowe" },
+    { id: "Auto3", name: "Skoda Octavia 3", plate: "RZ 34567", type: "osobowe" },
+    { id: "Auto4", name: "Skoda Superb", plate: "RZ 45678", type: "osobowe" },
+    { id: "Auto5", name: "Hyundai Tucson 1", plate: "RZ 56789", type: "osobowe" },
+    { id: "Auto6", name: "Hyundai Tucson 2", plate: "RZ 67890", type: "osobowe" }
 ];
 
 // URL Google Apps Script (do zastąpienia własnym)
@@ -25,6 +25,7 @@ let selectedCar = null;
 let flatpickrInstance = null;
 let reservations = [];
 let editingReservationId = null;
+let monthCalendarInstance = null;
 
 // Funkcje pomocnicze
 function getCurrentUser() {
@@ -60,6 +61,23 @@ function generateReservationId() {
     return 'RES-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 }
 
+// Funkcja do automatycznego czyszczenia starych rezerwacji
+function cleanOldReservations() {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    const initialLength = reservations.length;
+    reservations = reservations.filter(reservation => {
+        const reservationDate = new Date(reservation.endDate);
+        return reservationDate >= sixMonthsAgo;
+    });
+    
+    if (initialLength !== reservations.length) {
+        saveReservationsToStorage();
+        console.log(`Usunięto ${initialLength - reservations.length} starych rezerwacji (starszych niż 6 miesięcy)`);
+    }
+}
+
 // Obsługa logowania
 if (document.getElementById('loginForm')) {
     document.getElementById('loginForm').addEventListener('submit', function(e) {
@@ -84,6 +102,10 @@ if (document.getElementById('loginForm')) {
         
         if (user) {
             setCurrentUser(user);
+            
+            // Wyczyść stare rezerwacje przy logowaniu
+            cleanOldReservations();
+            
             window.location.href = 'index.html';
         } else {
             showMessage('loginMessage', 'Nieprawidłowy login lub hasło', 'error');
@@ -136,10 +158,12 @@ if (document.getElementById('employeeName')) {
         if (user.role === 'admin' || user.login === 'admin') {
             addAdminPanelLink();
             addReservationsManagementLink();
+            addMonthlyReportsLink();
+            addMonthCalendarLink();
         }
         
-        // Inicjalizuj kalendarz
-        initCalendar();
+        // Inicjalizuj kalendarz rezerwacji - POPRAWIONA WERSJA
+        initReservationCalendar();
         
         // Załaduj rezerwacje
         loadReservations();
@@ -165,55 +189,48 @@ if (document.getElementById('employeeName')) {
         
         // Załaduj dane z Google Sheets (symulacja)
         loadDataFromGoogleSheets();
+        
+        // Inicjalizuj kalendarz miesiąca jeśli istnieje
+        if (document.getElementById('monthCalendar')) {
+            initMonthCalendar();
+        }
     });
 }
 
-// Dodaj link do zmiany hasła
-function addPasswordChangeLink() {
+// Dodaj link do kalendarza miesiąca
+function addMonthCalendarLink() {
     const userInfo = document.querySelector('.user-info');
     if (userInfo) {
-        const passwordLink = document.createElement('div');
-        passwordLink.className = 'password-change-link';
-        passwordLink.innerHTML = `
-            <a href="change-password.html"><i class="fas fa-key"></i> Zmień hasło</a>
-        `;
-        userInfo.appendChild(passwordLink);
+        const calendarLink = document.createElement('a');
+        calendarLink.href = 'month-calendar.html';
+        calendarLink.innerHTML = '<i class="fas fa-calendar-alt"></i> Kalendarz miesiąca';
+        calendarLink.className = 'btn-admin';
+        calendarLink.style.marginLeft = '10px';
+        calendarLink.style.padding = '8px 15px';
+        calendarLink.style.fontSize = '14px';
+        calendarLink.style.backgroundColor = '#3498db';
+        userInfo.appendChild(calendarLink);
     }
 }
 
-// Dodaj link do panelu administracyjnego dla administratorów
-function addAdminPanelLink() {
+// Dodaj link do raportów miesięcznych
+function addMonthlyReportsLink() {
     const userInfo = document.querySelector('.user-info');
     if (userInfo) {
-        const adminLink = document.createElement('a');
-        adminLink.href = 'admin.html';
-        adminLink.innerHTML = '<i class="fas fa-user-cog"></i> Panel administracyjny';
-        adminLink.className = 'btn-admin';
-        adminLink.style.marginLeft = '10px';
-        adminLink.style.padding = '8px 15px';
-        adminLink.style.fontSize = '14px';
-        userInfo.appendChild(adminLink);
+        const reportsLink = document.createElement('a');
+        reportsLink.href = 'monthly-reports.html';
+        reportsLink.innerHTML = '<i class="fas fa-chart-bar"></i> Raporty miesięczne';
+        reportsLink.className = 'btn-admin';
+        reportsLink.style.marginLeft = '10px';
+        reportsLink.style.padding = '8px 15px';
+        reportsLink.style.fontSize = '14px';
+        reportsLink.style.backgroundColor = '#e67e22';
+        userInfo.appendChild(reportsLink);
     }
 }
 
-// Dodaj link do zarządzania rezerwacjami dla administratorów
-function addReservationsManagementLink() {
-    const userInfo = document.querySelector('.user-info');
-    if (userInfo) {
-        const reservationsLink = document.createElement('a');
-        reservationsLink.href = 'reservations-management.html';
-        reservationsLink.innerHTML = '<i class="fas fa-calendar-alt"></i> Zarządzaj rezerwacjami';
-        reservationsLink.className = 'btn-admin';
-        reservationsLink.style.marginLeft = '10px';
-        reservationsLink.style.padding = '8px 15px';
-        reservationsLink.style.fontSize = '14px';
-        reservationsLink.style.backgroundColor = '#9b59b6';
-        userInfo.appendChild(reservationsLink);
-    }
-}
-
-// Inicjalizacja kalendarza - POPRAWIONA WERSJA
-function initCalendar() {
+// Inicjalizacja kalendarza rezerwacji - POPRAWIONA WERSJA (pojedynczy dzień → zakres)
+function initReservationCalendar() {
     flatpickrInstance = flatpickr("#reservationDates", {
         mode: "range",
         dateFormat: "Y-m-d",
@@ -223,6 +240,32 @@ function initCalendar() {
         disableMobile: true,
         allowInput: false,
         clickOpens: true,
+        // WAŻNE: Pozwalamy na wybór pojedynczego dnia
+        onReady: function(selectedDates, dateStr, instance) {
+            // Dodaj customowy przycisk dla pojedynczego dnia
+            const calendarContainer = instance.calendarContainer;
+            
+            // Dodajemy customową obsługę kliknięć
+            instance._bind = instance._bind || instance.bind;
+            instance.bind = function(element, event, handler) {
+                if (event === 'click' && element.classList.contains('flatpickr-day')) {
+                    element.addEventListener('click', function(e) {
+                        // Jeśli wybrano już jedną datę, dodaj drugą (tego samego dnia)
+                        if (instance.selectedDates.length === 1) {
+                            const firstDate = instance.selectedDates[0];
+                            instance.setDate([firstDate, firstDate], true);
+                            instance.close();
+                        } else {
+                            // Zacznij nowy zakres
+                            instance.clear();
+                            instance.setDate([this.dateObj], false);
+                        }
+                    });
+                } else {
+                    instance._bind(element, event, handler);
+                }
+            };
+        },
         onChange: function(selectedDates, dateStr, instance) {
             if (selectedDates.length === 2) {
                 const startDate = selectedDates[0];
@@ -240,6 +283,11 @@ function initCalendar() {
                 const formattedStart = startDate.toISOString().split('T')[0];
                 const formattedEnd = endDate.toISOString().split('T')[0];
                 console.log('Wybrane daty:', formattedStart, 'do', formattedEnd);
+            } else if (selectedDates.length === 1) {
+                // Jeśli wybrano tylko jeden dzień, pokaż komunikat
+                const selectedDate = selectedDates[0];
+                document.getElementById('reservationDates').value = 
+                    selectedDate.toISOString().split('T')[0] + ' (kliknij ponownie ten sam dzień)';
             }
         },
         onClose: function(selectedDates, dateStr, instance) {
@@ -250,9 +298,155 @@ function initCalendar() {
                 const formattedStart = startDate.toISOString().split('T')[0];
                 const formattedEnd = endDate.toISOString().split('T')[0];
                 instance.input.value = `${formattedStart} do ${formattedEnd}`;
+            } else if (selectedDates.length === 1) {
+                // Jeśli tylko jeden dzień, ustaw jako zakres 1-dniowy
+                const singleDate = selectedDates[0];
+                instance.setDate([singleDate, singleDate], true);
             }
         }
     });
+    
+    // Dodaj customową obsługę dla lepszej UX
+    const dateInput = document.getElementById('reservationDates');
+    if (dateInput) {
+        dateInput.addEventListener('click', function() {
+            if (flatpickrInstance.selectedDates.length === 1) {
+                // Jeśli już wybrano jeden dzień, pokaż instrukcję
+                showMessage('message', 'Kliknij ponownie ten sam dzień w kalendarzu, aby zarezerwować na 1 dzień', 'info');
+            }
+        });
+    }
+}
+
+// Inicjalizacja kalendarza miesiąca
+function initMonthCalendar() {
+    monthCalendarInstance = flatpickr("#monthCalendar", {
+        inline: true,
+        static: true,
+        mode: "multiple",
+        dateFormat: "Y-m-d",
+        locale: "pl",
+        showMonths: 1,
+        disableMobile: true,
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+            // Oznacz zajęte dni
+            const dateStr = dayElem.dateObj.toISOString().split('T')[0];
+            const isReserved = reservations.some(r => {
+                const start = new Date(r.startDate);
+                const end = new Date(r.endDate);
+                const current = new Date(dateStr);
+                return current >= start && current <= end;
+            });
+            
+            if (isReserved) {
+                dayElem.classList.add('reserved-day');
+                dayElem.innerHTML += '<span class="reserved-badge"><i class="fas fa-car"></i></span>';
+            }
+        },
+        onChange: function(selectedDates, dateStr, instance) {
+            // Możliwość zaznaczania dni w kalendarzu miesięcznym
+            console.log('Wybrane dni w kalendarzu miesięcznym:', selectedDates.length);
+        }
+    });
+    
+    // Dodaj przyciski nawigacji
+    addMonthCalendarNavigation();
+    updateMonthCalendarDisplay();
+}
+
+// Dodaj nawigację do kalendarza miesiąca
+function addMonthCalendarNavigation() {
+    const calendarContainer = document.querySelector('.month-calendar-container');
+    if (!calendarContainer) return;
+    
+    const navHTML = `
+        <div class="calendar-navigation">
+            <button id="prevMonth" class="btn-calendar-nav">
+                <i class="fas fa-chevron-left"></i> Poprzedni miesiąc
+            </button>
+            <h3 id="currentMonthDisplay">${getCurrentMonthName()}</h3>
+            <button id="nextMonth" class="btn-calendar-nav">
+                Następny miesiąc <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    `;
+    
+    calendarContainer.insertAdjacentHTML('afterbegin', navHTML);
+    
+    document.getElementById('prevMonth').addEventListener('click', function() {
+        monthCalendarInstance.changeMonth(-1);
+        updateMonthCalendarDisplay();
+    });
+    
+    document.getElementById('nextMonth').addEventListener('click', function() {
+        monthCalendarInstance.changeMonth(1);
+        updateMonthCalendarDisplay();
+    });
+}
+
+// Aktualizuj wyświetlanie kalendarza miesiąca
+function updateMonthCalendarDisplay() {
+    if (!monthCalendarInstance) return;
+    
+    const currentMonth = monthCalendarInstance.currentMonth;
+    const currentYear = monthCalendarInstance.currentYear;
+    const displayElement = document.getElementById('currentMonthDisplay');
+    
+    if (displayElement) {
+        const monthNames = [
+            'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+            'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'
+        ];
+        displayElement.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+    }
+    
+    // Oznacz wszystkie rezerwacje
+    markReservationsOnCalendar();
+}
+
+// Oznacz rezerwacje na kalendarzu
+function markReservationsOnCalendar() {
+    if (!monthCalendarInstance) return;
+    
+    const calendarDays = document.querySelectorAll('.flatpickr-day');
+    calendarDays.forEach(day => {
+        day.classList.remove('reserved-day');
+        day.classList.remove('reserved-by-user');
+        
+        const dateStr = day.dateObj.toISOString().split('T')[0];
+        
+        // Sprawdź rezerwacje dla tego dnia
+        reservations.forEach(reservation => {
+            const start = new Date(reservation.startDate);
+            const end = new Date(reservation.endDate);
+            const current = new Date(dateStr);
+            
+            if (current >= start && current <= end) {
+                day.classList.add('reserved-day');
+                
+                // Jeśli to rezerwacja aktualnego użytkownika
+                const user = getCurrentUser();
+                if (user && reservation.login === user.login) {
+                    day.classList.add('reserved-by-user');
+                }
+                
+                // Dodaj tooltip z informacją
+                const car = CARS.find(c => c.id === reservation.carId);
+                const carName = car ? car.name : reservation.carId;
+                day.title = `Zarezerwowane: ${carName}\nPrzez: ${reservation.employeeName}`;
+            }
+        });
+    });
+}
+
+// Pobierz nazwę bieżącego miesiąca
+function getCurrentMonthName() {
+    const monthNames = [
+        'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+        'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'
+    ];
+    const now = new Date();
+    return `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 }
 
 // Aktualizacja dostępności w kalendarzu
@@ -288,6 +482,9 @@ function loadReservations() {
     
     if (savedReservations) {
         reservations = JSON.parse(savedReservations);
+        
+        // Wyczyść stare rezerwacje przy ładowaniu
+        cleanOldReservations();
     } else {
         // Użyj domyślnych rezerwacji
         reservations = [
@@ -301,7 +498,8 @@ function loadReservations() {
                 endDate: getDateString(7),   // 7 dni od teraz
                 purpose: "Wyjazd służbowy do klienta",
                 bookingDate: getDateString(0),
-                login: "pracownik1"
+                login: "pracownik1",
+                status: "active"
             },
             {
                 id: generateReservationId(),
@@ -313,7 +511,8 @@ function loadReservations() {
                 endDate: getDateString(12),   // 12 dni od teraz
                 purpose: "Targi branżowe",
                 bookingDate: getDateString(0),
-                login: "pracownik2"
+                login: "pracownik2",
+                status: "active"
             }
         ];
         saveReservationsToStorage();
@@ -321,6 +520,11 @@ function loadReservations() {
     
     updateCarAvailabilityDisplay();
     updateUserReservationsDisplay();
+    
+    // Zaktualizuj kalendarz miesiąca jeśli istnieje
+    if (monthCalendarInstance) {
+        updateMonthCalendarDisplay();
+    }
 }
 
 // Zapisz rezerwacje do localStorage
@@ -348,7 +552,7 @@ function updateCarAvailabilityDisplay() {
         
         // Sprawdź czy auto jest zarezerwowane w najbliższych dniach
         const today = new Date();
-        const carReservations = reservations.filter(r => r.carId === car.id);
+        const carReservations = reservations.filter(r => r.carId === car.id && r.status !== 'cancelled');
         const upcomingReservations = carReservations.filter(r => new Date(r.endDate) >= today);
         
         if (upcomingReservations.length > 0) {
@@ -367,6 +571,9 @@ function updateCarAvailabilityDisplay() {
                 <div class="car-purpose">
                     <i class="fas fa-user"></i> ${nextReservation.employeeName}
                 </div>
+                <div class="car-availability-info">
+                    <small>Kolejna dostępność: ${getNextAvailableDate(car.id)}</small>
+                </div>
             `;
         } else {
             // Auto jest dostępne
@@ -374,13 +581,40 @@ function updateCarAvailabilityDisplay() {
             carElement.innerHTML = `
                 <h5>${car.name} (${car.plate})</h5>
                 <div class="car-dates">
-                    <i class="fas fa-calendar-check"></i> Dostępne
+                    <i class="fas fa-calendar-check"></i> Dostępne od dzisiaj
+                </div>
+                <div class="car-availability-info">
+                    <small>Brak rezerwacji w najbliższych dniach</small>
                 </div>
             `;
         }
         
         container.appendChild(carElement);
     });
+}
+
+// Pobierz następną dostępną datę dla auta
+function getNextAvailableDate(carId) {
+    const today = new Date();
+    const carReservations = reservations
+        .filter(r => r.carId === carId && r.status !== 'cancelled')
+        .sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
+    
+    if (carReservations.length === 0) {
+        return 'dziś';
+    }
+    
+    const lastReservation = carReservations[carReservations.length - 1];
+    const lastEndDate = new Date(lastReservation.endDate);
+    
+    if (lastEndDate < today) {
+        return 'dziś';
+    }
+    
+    // Znajdź następny wolny termin
+    const nextDay = new Date(lastEndDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    return formatDate(nextDay);
 }
 
 // Wyświetlanie rezerwacji użytkownika
@@ -393,10 +627,10 @@ function updateUserReservationsDisplay() {
     
     container.innerHTML = '';
     
-    const userReservations = reservations.filter(r => r.login === user.login);
+    const userReservations = reservations.filter(r => r.login === user.login && r.status !== 'cancelled');
     
     if (userReservations.length === 0) {
-        container.innerHTML = '<p>Nie masz żadnych rezerwacji.</p>';
+        container.innerHTML = '<p>Nie masz żadnych aktywnych rezerwacji.</p>';
         return;
     }
     
@@ -417,21 +651,90 @@ function updateUserReservationsDisplay() {
                     </button>
                 </div>
             `;
+        } else {
+            actionsHtml = `
+                <div class="reservation-actions">
+                    <button class="btn-edit-small" onclick="editUserReservation('${reservation.id}')">
+                        <i class="fas fa-edit"></i> Edytuj
+                    </button>
+                    <button class="btn-cancel-small" onclick="cancelUserReservation('${reservation.id}')">
+                        <i class="fas fa-times"></i> Anuluj
+                    </button>
+                </div>
+            `;
+        }
+        
+        const today = new Date();
+        const startDate = new Date(reservation.startDate);
+        const endDate = new Date(reservation.endDate);
+        let statusBadge = '';
+        
+        if (endDate < today) {
+            statusBadge = '<span class="status-badge status-past">Zakończona</span>';
+        } else if (startDate <= today && endDate >= today) {
+            statusBadge = '<span class="status-badge status-active">W trakcie</span>';
+        } else {
+            statusBadge = '<span class="status-badge status-upcoming">Nadchodząca</span>';
         }
         
         reservationElement.innerHTML = `
-            <h5>${car ? car.name : reservation.carId}</h5>
+            <div class="reservation-header">
+                <h5>${car ? car.name : reservation.carId} ${statusBadge}</h5>
+            </div>
             <div class="reservation-dates">
                 <i class="fas fa-calendar"></i> ${formatDate(reservation.startDate)} - ${formatDate(reservation.endDate)}
             </div>
             <div class="reservation-purpose">
                 <i class="fas fa-clipboard-list"></i> ${reservation.purpose}
             </div>
+            <div class="reservation-department">
+                <i class="fas fa-building"></i> ${reservation.department}
+            </div>
             ${actionsHtml}
         `;
         
         container.appendChild(reservationElement);
     });
+}
+
+// Anulowanie rezerwacji przez użytkownika
+function cancelUserReservation(reservationId) {
+    if (!confirm('Czy na pewno chcesz anulować tę rezerwację?')) return;
+    
+    const user = getCurrentUser();
+    if (!user) return;
+    
+    const reservation = reservations.find(r => r.id === reservationId);
+    if (!reservation) return;
+    
+    // Sprawdź czy użytkownik może anulować swoją rezerwację
+    if (reservation.login !== user.login && user.role !== 'admin' && user.login !== 'admin') {
+        showMessage('message', 'Brak uprawnień do anulowania tej rezerwacji', 'error');
+        return;
+    }
+    
+    // Oznacz rezerwację jako anulowaną
+    const index = reservations.findIndex(r => r.id === reservationId);
+    if (index !== -1) {
+        reservations[index].status = 'cancelled';
+        reservations[index].cancelledDate = new Date().toISOString().split('T')[0];
+        reservations[index].cancelledBy = user.login;
+        
+        saveReservationsToStorage();
+        
+        updateCarAvailabilityDisplay();
+        updateUserReservationsDisplay();
+        
+        if (selectedCar) {
+            updateCalendarAvailability();
+        }
+        
+        if (monthCalendarInstance) {
+            updateMonthCalendarDisplay();
+        }
+        
+        showMessage('message', 'Rezerwacja została anulowana', 'success');
+    }
 }
 
 // Edycja rezerwacji użytkownika (dla admina i właściciela rezerwacji)
@@ -459,11 +762,11 @@ function editUserReservation(reservationId) {
     const calendarSection = document.getElementById('calendarSection');
     calendarSection.classList.remove('hidden');
     
-    // Ustaw daty w kalendarzu - POPRAWIONA WERSJA
+    // Ustaw daty w kalendarzu
     const startDate = new Date(reservation.startDate);
     const endDate = new Date(reservation.endDate);
     
-    // Ustawienie dat w flatpickr - upewnij się że kalendarz jest zainicjalizowany
+    // Ustawienie dat w flatpickr
     if (flatpickrInstance) {
         flatpickrInstance.setDate([startDate, endDate], false);
         
@@ -496,7 +799,7 @@ function editUserReservation(reservationId) {
 
 // Usuwanie rezerwacji użytkownika (dla admina)
 function deleteUserReservation(reservationId) {
-    if (!confirm('Czy na pewno chcesz usunąć tę rezerwację?')) return;
+    if (!confirm('Czy na pewno chcesz trwale usunąć tę rezerwację?')) return;
     
     const user = getCurrentUser();
     if (!user || (user.role !== 'admin' && user.login !== 'admin')) {
@@ -516,7 +819,11 @@ function deleteUserReservation(reservationId) {
             updateCalendarAvailability();
         }
         
-        showMessage('message', 'Rezerwacja została usunięta', 'success');
+        if (monthCalendarInstance) {
+            updateMonthCalendarDisplay();
+        }
+        
+        showMessage('message', 'Rezerwacja została trwale usunięta', 'success');
     }
 }
 
@@ -543,7 +850,7 @@ function submitReservation() {
     }
     
     if (selectedDates.length !== 2) {
-        showMessage('message', 'Wybierz zakres dat (od i do)', 'error');
+        showMessage('message', 'Wybierz zakres dat (kliknij dzień rozpoczęcia, a następnie ten sam dzień dla rezerwacji 1-dniowej)', 'error');
         return;
     }
     
@@ -552,13 +859,13 @@ function submitReservation() {
     const diffTime = Math.abs(endDate - startDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     
-    if (diffDays < 1 || diffDays > 7) {
-        showMessage('message', 'Możesz zarezerwować auto na okres od 1 do 7 dni', 'error');
+    if (diffDays > 7) {
+        showMessage('message', 'Możesz zarezerwować auto maksymalnie na 7 dni', 'error');
         return;
     }
     
     // Sprawdź czy auto jest dostępne w wybranym okresie (pomiń bieżącą rezerwację jeśli edytujemy)
-    const carReservations = reservations.filter(r => r.carId === selectedCar && r.id !== editingReservationId);
+    const carReservations = reservations.filter(r => r.carId === selectedCar && r.id !== editingReservationId && r.status !== 'cancelled');
     const isAvailable = carReservations.every(reservation => {
         const resStart = new Date(reservation.startDate);
         const resEnd = new Date(reservation.endDate);
@@ -583,7 +890,9 @@ function submitReservation() {
         endDate: endDate.toISOString().split('T')[0],
         purpose: document.getElementById('purpose').value,
         bookingDate: new Date().toISOString().split('T')[0],
-        login: editingReservationId ? reservations.find(r => r.id === editingReservationId)?.login : user.login
+        login: editingReservationId ? reservations.find(r => r.id === editingReservationId)?.login : user.login,
+        status: 'active',
+        daysCount: diffDays
     };
     
     if (editingReservationId) {
@@ -608,6 +917,11 @@ function submitReservation() {
     updateCarAvailabilityDisplay();
     updateUserReservationsDisplay();
     updateCalendarAvailability();
+    
+    // Aktualizuj kalendarz miesiąca
+    if (monthCalendarInstance) {
+        updateMonthCalendarDisplay();
+    }
     
     // Aktualizuj datę ostatniej aktualizacji
     const lastUpdateElement = document.getElementById('lastUpdate');
@@ -670,3 +984,72 @@ function loadDataFromGoogleSheets() {
     }, 30000);
 }
 
+// Eksport do PDF
+function exportToPDF(content, filename = 'rezerwacja.pdf') {
+    // W rzeczywistości użyj biblioteki jsPDF
+    // Tutaj symulacja - pobierz jako HTML
+    const blob = new Blob([content], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Generuj raport miesięczny
+function generateMonthlyReport(month, year) {
+    const report = {
+        month: month,
+        year: year,
+        generatedDate: new Date().toISOString(),
+        totalReservations: 0,
+        totalDays: 0,
+        byCar: {},
+        byDepartment: {},
+        byEmployee: {}
+    };
+    
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    
+    const monthlyReservations = reservations.filter(r => {
+        const resDate = new Date(r.startDate);
+        return resDate >= startDate && resDate <= endDate && r.status !== 'cancelled';
+    });
+    
+    report.totalReservations = monthlyReservations.length;
+    
+    monthlyReservations.forEach(reservation => {
+        // Liczba dni
+        const start = new Date(reservation.startDate);
+        const end = new Date(reservation.endDate);
+        const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        report.totalDays += days;
+        
+        // Według auta
+        if (!report.byCar[reservation.carId]) {
+            report.byCar[reservation.carId] = { count: 0, days: 0 };
+        }
+        report.byCar[reservation.carId].count++;
+        report.byCar[reservation.carId].days += days;
+        
+        // Według działu
+        if (!report.byDepartment[reservation.department]) {
+            report.byDepartment[reservation.department] = { count: 0, days: 0 };
+        }
+        report.byDepartment[reservation.department].count++;
+        report.byDepartment[reservation.department].days += days;
+        
+        // Według pracownika
+        if (!report.byEmployee[reservation.employeeName]) {
+            report.byEmployee[reservation.employeeName] = { count: 0, days: 0, department: reservation.department };
+        }
+        report.byEmployee[reservation.employeeName].count++;
+        report.byEmployee[reservation.employeeName].days += days;
+    });
+    
+    return report;
+}
