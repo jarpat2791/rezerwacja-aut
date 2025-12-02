@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rezerwacja aut służbowych</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-car"></i> Rezerwacja Aut Służbowych</h1>
+            <div class="user-info">
+                <span id="userDisplay">Zalogowany jako: <span id="username"></span></span>
+                <button id="logoutBtn" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Wyloguj
+                </button>
+            </div>
+			<div class="password-change-link">
+    <a href="change-password.html"><i class="fas fa-key"></i> Zmień hasło</a>
+</div>
+        </header>
+        
+        <main>
+            <div class="form-section">
+                <h2><i class="fas fa-calendar-alt"></i> Zarezerwuj auto służbowe</h2>
+                
+                <form id="reservationForm">
+                    <div class="form-group">
+                        <label for="employeeName"><i class="fas fa-user-tie"></i> Imię i nazwisko</label>
+                        <input type="text" id="employeeName" name="employeeName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="employeeDepartment"><i class="fas fa-building"></i> Dział</label>
+                        <input type="text" id="employeeDepartment" name="employeeDepartment" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="carSelect"><i class="fas fa-car"></i> Wybierz auto</label>
+                        <select id="carSelect" name="carSelect" required>
+                            <option value="">-- Wybierz auto --</option>
+                            <option value="Auto1">Auto 1: Toyota Corolla (KR 12345)</option>
+                            <option value="Auto2">Auto 2: Volkswagen Passat (KR 23456)</option>
+                            <option value="Auto3">Auto 3: Skoda Octavia (KR 34567)</option>
+                            <option value="Auto4">Auto 4: Ford Focus (KR 45678)</option>
+                            <option value="Auto5">Auto 5: Opel Astra (KR 56789)</option>
+                            <option value="Auto6">Auto 6: Hyundai i30 (KR 67890)</option>
+                        </select>
+                    </div>
+                    
+                    <div id="calendarSection" class="hidden">
+                        <div class="form-group">
+                            <label for="reservationDates"><i class="fas fa-calendar-check"></i> Wybierz okres rezerwacji (1-7 dni)</label>
+                            <input type="text" id="reservationDates" name="reservationDates" placeholder="Wybierz daty" readonly>
+                            <div class="form-hint">Możesz zarezerwować auto na okres od 1 do 7 dni</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="purpose"><i class="fas fa-clipboard-list"></i> Cel wyjazdu</label>
+                            <textarea id="purpose" name="purpose" rows="3" required></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn-submit">
+                                <i class="fas fa-paper-plane"></i> Zatwierdź rezerwację
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <div id="message" class="message"></div>
+            </div>
+            
+            <div class="info-section">
+                <h3><i class="fas fa-info-circle"></i> Informacje o rezerwacjach</h3>
+                <div class="car-status-container">
+                    <div class="car-status">
+                        <h4>Dostępność aut</h4>
+                        <div id="carAvailability"></div>
+                    </div>
+                    
+                    <div class="car-status">
+                        <h4>Twoje rezerwacje</h4>
+                        <div id="userReservations"></div>
+                    </div>
+                </div>
+                
+                <div class="instructions">
+                    <h4><i class="fas fa-list-ol"></i> Instrukcja rezerwacji</h4>
+                    <ol>
+                        <li>Wybierz auto z listy rozwijanej</li>
+                        <li>Wybierz daty rezerwacji w kalendarzu (od 1 do 7 dni)</li>
+                        <li>Wypełnij cel wyjazdu</li>
+                        <li>Kliknij "Zatwierdź rezerwację"</li>
+                        <li>Rezerwacja zostanie zapisana w systemie</li>
+                    </ol>
+                    <p class="note"><strong>Uwaga:</strong> Każde auto może mieć tylko jedną rezerwację w danym okresie czasu.</p>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>© 2023 System Rezerwacji Aut Służbowych | Wersja 1.0</p>
+            <p id="lastUpdate">Ostatnia aktualizacja: --</p>
+        </footer>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

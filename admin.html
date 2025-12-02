@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel administracyjny - Zarządzanie użytkownikami</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-user-cog"></i> Panel administracyjny - Zarządzanie użytkownikami</h1>
+            <div class="user-info">
+                <span id="userDisplay">Administrator</span>
+                <button onclick="window.location.href='index.html'" class="btn-logout">
+                    <i class="fas fa-arrow-left"></i> Powrót
+                </button>
+            </div>
+        </header>
+        
+        <main>
+            <div class="admin-section">
+                <h2><i class="fas fa-users"></i> Zarządzanie użytkownikami</h2>
+                
+                <div class="admin-actions">
+                    <button id="addUserBtn" class="btn-admin">
+                        <i class="fas fa-user-plus"></i> Dodaj nowego użytkownika
+                    </button>
+                    <button id="exportUsersBtn" class="btn-admin">
+                        <i class="fas fa-download"></i> Eksportuj listę użytkowników
+                    </button>
+                </div>
+                
+                <div class="users-list">
+                    <h3><i class="fas fa-list"></i> Lista użytkowników</h3>
+                    <div id="usersTableContainer">
+                        <table id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>Login</th>
+                                    <th>Hasło</th>
+                                    <th>Imię i nazwisko</th>
+                                    <th>Rola</th>
+                                    <th>Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Użytkownicy będą dodawani dynamicznie -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Formularz dodawania/edycji użytkownika -->
+                <div id="userFormModal" class="modal hidden">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="modalTitle">Dodaj nowego użytkownika</h3>
+                            <button class="close-modal">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="userForm">
+                                <div class="form-group">
+                                    <label for="editLogin"><i class="fas fa-user"></i> Login</label>
+                                    <input type="text" id="editLogin" name="editLogin" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="editPassword"><i class="fas fa-lock"></i> Hasło</label>
+                                    <input type="password" id="editPassword" name="editPassword" required>
+                                    <div class="password-strength">
+                                        <span>Siła hasła: </span>
+                                        <span id="passwordStrength">-</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="editName"><i class="fas fa-user-tie"></i> Imię i nazwisko</label>
+                                    <input type="text" id="editName" name="editName" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="editRole"><i class="fas fa-user-tag"></i> Rola</label>
+                                    <select id="editRole" name="editRole">
+                                        <option value="user">Pracownik</option>
+                                        <option value="admin">Administrator</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <button type="submit" class="btn-submit">
+                                        <i class="fas fa-save"></i> Zapisz użytkownika
+                                    </button>
+                                    <button type="button" class="btn-cancel close-modal">
+                                        <i class="fas fa-times"></i> Anuluj
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h3><i class="fas fa-info-circle"></i> Instrukcja zarządzania użytkownikami</h3>
+                <div class="instructions">
+                    <h4><i class="fas fa-list-ol"></i> Jak zarządzać użytkownikami:</h4>
+                    <ol>
+                        <li><strong>Zmiana hasła:</strong> Kliknij przycisk "Zmień hasło" przy danym użytkowniku</li>
+                        <li><strong>Zmiana loginu:</strong> Kliknij przycisk "Edytuj" przy danym użytkowniku</li>
+                        <li><strong>Dodanie użytkownika:</strong> Kliknij "Dodaj nowego użytkownika"</li>
+                        <li><strong>Usunięcie użytkownika:</strong> Kliknij przycisk "Usuń" przy danym użytkowniku</li>
+                    </ol>
+                    
+                    <h4><i class="fas fa-shield-alt"></i> Zalecenia bezpieczeństwa:</h4>
+                    <ul>
+                        <li>Hasła powinny mieć minimum 8 znaków</li>
+                        <li>Używaj kombinacji liter, cyfr i znaków specjalnych</li>
+                        <li>Regularnie zmieniaj hasła (co 90 dni)</li>
+                        <li>Nie używaj tych samych haseł w różnych systemach</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>© 2023 System Rezerwacji Aut Służbowych | Panel administracyjny</p>
+            <p id="lastUpdate">Ostatnia aktualizacja: --</p>
+        </footer>
+    </div>
+    
+    <script src="admin-script.js"></script>
+</body>
+</html>
