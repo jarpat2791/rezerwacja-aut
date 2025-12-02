@@ -266,6 +266,8 @@ function addAdminLinks(user) {
     }
 }
 
+// ... (pozostały kod bez zmian) ...
+
 // ===== KALENDARZ REZERWACJI =====
 function initReservationCalendar() {
     if (!document.getElementById('reservationDates')) return;
@@ -279,6 +281,12 @@ function initReservationCalendar() {
         disableMobile: true,
         allowInput: false,
         clickOpens: true,
+        // DODAJ TE USTAWIENIA:
+        time_24hr: true,
+        onReady: function(selectedDates, dateStr, instance) {
+            instance.set('altInput', true);
+            instance.set('altFormat', 'd.m.Y');
+        },
         onChange: function(selectedDates, dateStr, instance) {
             if (selectedDates.length === 2) {
                 const startDate = selectedDates[0];
@@ -292,46 +300,406 @@ function initReservationCalendar() {
                     return;
                 }
                 
-                // Upewnij się, że daty są poprawnie sformatowane
-                const formattedStart = startDate.toISOString().split('T')[0];
-                const formattedEnd = endDate.toISOString().split('T')[0];
+                // POPRAWIONE: Użyj formatowania z uwzględnieniem strefy czasowej
+                const formattedStart = formatDateForDisplay(startDate);
+                const formattedEnd = formatDateForDisplay(endDate);
                 console.log('Wybrane daty:', formattedStart, 'do', formattedEnd);
+                
+                // Ustaw wartość pola z poprawnym formatowaniem
+                instance.input.value = `${formattedStart} do ${formattedEnd}`;
             } else if (selectedDates.length === 1) {
-                // Jeśli wybrano tylko jeden dzień, pokaż komunikat
+                // Jeśli wybrano tylko jeden dzień
                 const selectedDate = selectedDates[0];
-                document.getElementById('reservationDates').value = 
-                    selectedDate.toISOString().split('T')[0] + ' (kliknij ponownie ten sam dzień dla rezerwacji 1-dniowej)';
+                const formattedDate = formatDateForDisplay(selectedDate);
+                instance.input.value = `${formattedDate} (kliknij ponownie ten sam dzień dla rezerwacji 1-dniowej)`;
             }
         },
         onClose: function(selectedDates, dateStr, instance) {
-            // Upewnij się, że data jest poprawnie wyświetlana po zamknięciu kalendarza
+            // POPRAWIONE: Zapewnij poprawny format po zamknięciu
             if (selectedDates.length === 2) {
                 const startDate = selectedDates[0];
                 const endDate = selectedDates[1];
-                const formattedStart = startDate.toISOString().split('T')[0];
-                const formattedEnd = endDate.toISOString().split('T')[0];
+                const formattedStart = formatDateForDisplay(startDate);
+                const formattedEnd = formatDateForDisplay(endDate);
                 instance.input.value = `${formattedStart} do ${formattedEnd}`;
             } else if (selectedDates.length === 1) {
-                // Jeśli tylko jeden dzień, ustaw jako zakres 1-dniowy
+                // Dla rezerwacji 1-dniowej
                 const singleDate = selectedDates[0];
                 instance.setDate([singleDate, singleDate], true);
-                instance.input.value = singleDate.toISOString().split('T')[0] + ' (1 dzień)';
+                const formattedDate = formatDateForDisplay(singleDate);
+                instance.input.value = `${formattedDate} (1 dzień)`;
             }
         }
     });
-    
-    // Dodaj customową obsługę dla lepszej UX
-    const dateInput = document.getElementById('reservationDates');
-    if (dateInput) {
-        dateInput.addEventListener('click', function() {
-            if (flatpickrInstance && flatpickrInstance.selectedDates.length === 1) {
-                // Jeśli już wybrano jeden dzień, pokaż instrukcję
-                showMessage('message', 'Kliknij ponownie ten sam dzień w kalendarzu, aby zarezerwować na 1 dzień', 'info');
-            }
-        });
-    }
 }
 
+// NOWA FUNKCJA: Formatowanie daty z uwzględnieniem strefy czasowej
+function formatDateForDisplay(date) {
+    // Użyj lokalnej strefy czasowej
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${day}.${month}.${year}`;
+}
+
+// ZMIENIONA FUNKCJA: Zatwierdzanie rezerwacji
+function submitReservation() {
+    const user = getCurrentUser();
+    if (!user) return;
+    
+    const selectedDates = flatpickrInstance ? flatpickrInstance.selectedDates : [];
+    
+    if (!selectedCar) {
+        showMessage('message', 'Wybierz auto', 'error');
+        return;
+    }
+    
+    if (selectedDates.length !== 2) {
+        showMessage('message', 'Wybierz zakres dat', 'error');
+        return;
+    }
+    
+    const startDate = selectedDates[0];
+    const endDate = selectedDates[1];
+    const diffTime = Math.abs(endDate - startDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    
+    if (diffDays > 7) {
+        showMessage('message', 'Możesz zarezerwować auto maksymalnie na 7 dni', 'error');
+        return;
+    }
+    
+    // Sprawdź dostępność auta
+    const carReservations = reservations.filter(r => 
+        r.carId === selectedCar && 
+        r.id !== editingReservationId && 
+        r.status !== 'cancelled'
+    );
+    
+    const isAvailable = carReservations.every(reservation => {
+        const resStart = new Date(reservation.startDate);
+        const resEnd = new Date(reservation.endDate);
+        
+        return (endDate < resStart) || (startDate > resEnd);
+    });
+    
+    if (!isAvailable) {
+        showMessage('message', 'Auto jest już zarezerwowane w wybranym okresie', 'error');
+        return;
+    }
+    
+    // POPRAWIONE: Zapewnij poprawny format dat
+    const startDateStr = formatDateForStorage(startDate);
+    const endDateStr = formatDateForStorage(endDate);
+    
+    // Przygotuj dane rezerwacji
+    const reservationData = {
+        id: editingReservationId || generateReservationId(),
+        carId: selectedCar,
+        carName: CARS.find(c => c.id === selectedCar)?.name || selectedCar,
+        employeeName: document.getElementById('employeeName').value,
+        department: document.getElementById('employeeDepartment').value,
+        startDate: startDateStr, // Użyj poprawionego formatu
+        endDate: endDateStr,     // Użyj poprawionego formatu
+        purpose: document.getElementById('purpose').value,
+        bookingDate: new Date().toISOString().split('T')[0],
+        login: editingReservationId ? reservations.find(r => r.id === editingReservationId)?.login : user.login,
+        status: 'active',
+        daysCount: diffDays
+    };
+    
+    // ... (reszta funkcji bez zmian) ...
+}
+
+// NOWA FUNKCJA: Formatowanie daty do przechowywania
+function formatDateForStorage(date) {
+    // Zawsze zapisuj jako YYYY-MM-DD w lokalnej strefie czasowej
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// ZMIENIONA FUNKCJA: Formatowanie daty do wyświetlania
+function formatDate(dateString) {
+    // Obsłuż różne formaty dat
+    let date;
+    if (dateString.includes('.')) {
+        // Format DD.MM.YYYY
+        const parts = dateString.split('.');
+        date = new Date(parts[2], parts[1] - 1, parts[0]);
+    } else {
+        // Format YYYY-MM-DD
+        date = new Date(dateString);
+    }
+    
+    return date.toLocaleDateString('pl-PL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+// ===== ROZSZERZENIE O FUNKCJE RAPORTOWANIA =====
+function exportReservationsToPDF() {
+    const user = getCurrentUser();
+    if (!user) return;
+    
+    // Pobierz wszystkie rezerwacje
+    const allReservations = reservations.filter(r => r.status !== 'cancelled');
+    
+    // Utwórz zawartość HTML
+    const content = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1 { color: #333; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #4CAF50; color: white; }
+                .header { margin-bottom: 30px; }
+                .date { font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Raport rezerwacji aut służbowych</h1>
+                <p class="date">Wygenerowano: ${new Date().toLocaleString('pl-PL')}</p>
+                <p>Liczba rezerwacji: ${allReservations.length}</p>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Auto</th>
+                        <th>Pracownik</th>
+                        <th>Dział</th>
+                        <th>Od</th>
+                        <th>Do</th>
+                        <th>Cel wyjazdu</th>
+                        <th>Liczba dni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${allReservations.map(reservation => `
+                        <tr>
+                            <td>${reservation.carName}</td>
+                            <td>${reservation.employeeName}</td>
+                            <td>${reservation.department}</td>
+                            <td>${formatDate(reservation.startDate)}</td>
+                            <td>${formatDate(reservation.endDate)}</td>
+                            <td>${reservation.purpose}</td>
+                            <td>${reservation.daysCount || 1}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </body>
+        </html>
+    `;
+    
+    // Eksport do PDF (użyj jsPDF z html2canvas)
+    if (typeof html2canvas !== 'undefined' && typeof jsPDF !== 'undefined') {
+        html2canvas(document.body).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgWidth = 210;
+            const imgHeight = canvas.height * imgWidth / canvas.width;
+            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+            pdf.save('raport-rezerwacji.pdf');
+        });
+    } else {
+        // Fallback - pobierz jako HTML
+        const blob = new Blob([content], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'raport-rezerwacji.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
+    showMessage('message', 'Generowanie raportu PDF...', 'info');
+}
+
+// ===== GENEROWANIE RAPORTÓW MIESIĘCZNYCH =====
+function generateMonthlyReports() {
+    const user = getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.login !== 'admin')) {
+        showMessage('message', 'Brak uprawnień do generowania raportów', 'error');
+        return;
+    }
+    
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+    
+    // Generuj raport dla bieżącego miesiąca
+    const report = generateMonthlyReport(currentMonth, currentYear);
+    
+    // Wyświetl raport
+    displayMonthlyReport(report);
+    
+    // Eksportuj do PDF
+    exportMonthlyReportToPDF(report);
+}
+
+function displayMonthlyReport(report) {
+    // Utwórz okno modalne z raportem
+    const modal = document.createElement('div');
+    modal.className = 'report-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.className = 'report-content';
+    modalContent.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        max-width: 800px;
+        max-height: 80vh;
+        overflow-y: auto;
+    `;
+    
+    modalContent.innerHTML = `
+        <h2>Raport miesięczny: ${report.month}/${report.year}</h2>
+        <div class="report-summary">
+            <p><strong>Łączna liczba rezerwacji:</strong> ${report.totalReservations}</p>
+            <p><strong>Łączna liczba dni:</strong> ${report.totalDays}</p>
+        </div>
+        <div class="report-sections">
+            <h3>Rezerwacje według auta</h3>
+            ${Object.entries(report.byCar).map(([car, data]) => `
+                <p>${car}: ${data.count} rezerwacji, ${data.days} dni</p>
+            `).join('')}
+        </div>
+        <button onclick="this.closest('.report-modal').remove()" style="margin-top: 20px;">
+            Zamknij
+        </button>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+}
+
+function exportMonthlyReportToPDF(report) {
+    const content = `
+        <h1>Raport miesięczny rezerwacji</h1>
+        <p>Miesiąc: ${report.month}/${report.year}</p>
+        <p>Łączna liczba rezerwacji: ${report.totalReservations}</p>
+        <p>Łączna liczba dni: ${report.totalDays}</p>
+        <h2>Rezerwacje według auta:</h2>
+        ${Object.entries(report.byCar).map(([car, data]) => 
+            `<p>${car}: ${data.count} rezerwacji, ${data.days} dni</p>`
+        ).join('')}
+    `;
+    
+    // Eksport do PDF (podobnie jak w exportReservationsToPDF)
+    exportToPDF(content, `raport-miesieczny-${report.month}-${report.year}.pdf`);
+}
+
+// ===== DODAJ PRZYCISKI DO GENEROWANIA RAPORTÓW =====
+function addReportButtons() {
+    const user = getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.login !== 'admin')) return;
+    
+    const infoSection = document.querySelector('.info-section');
+    if (!infoSection) return;
+    
+    // Sprawdź czy przyciski już istnieją
+    if (document.getElementById('reportButtons')) return;
+    
+    const reportButtonsHTML = `
+        <div id="reportButtons" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <h3><i class="fas fa-chart-bar"></i> Raporty i eksport</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+                <button onclick="exportReservationsToPDF()" class="btn-admin" style="background: #3498db;">
+                    <i class="fas fa-file-pdf"></i> Eksportuj do PDF
+                </button>
+                <button onclick="generateMonthlyReports()" class="btn-admin" style="background: #e67e22;">
+                    <i class="fas fa-chart-line"></i> Generuj raport miesięczny
+                </button>
+                <button onclick="exportAllReservationsToExcel()" class="btn-admin" style="background: #27ae60;">
+                    <i class="fas fa-file-excel"></i> Eksportuj do Excel
+                </button>
+            </div>
+        </div>
+    `;
+    
+    infoSection.insertAdjacentHTML('beforeend', reportButtonsHTML);
+}
+
+// NOWA FUNKCJA: Eksport do Excel
+function exportAllReservationsToExcel() {
+    const csvContent = "data:text/csv;charset=utf-8," 
+        + "Auto,Pracownik,Dział,Data rozpoczęcia,Data zakończenia,Cel wyjazdu,Liczba dni\n"
+        + reservations.filter(r => r.status !== 'cancelled').map(reservation => 
+            `"${reservation.carName}","${reservation.employeeName}","${reservation.department}",` +
+            `"${formatDate(reservation.startDate)}","${formatDate(reservation.endDate)}",` +
+            `"${reservation.purpose}","${reservation.daysCount || 1}"`
+        ).join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "rezerwacje.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showMessage('message', 'Eksport do CSV/Excel zakończony', 'success');
+}
+
+// ===== AKTUALIZACJA INICJALIZACJI =====
+// W funkcji DOMContentLoaded dodaj:
+if (document.getElementById('employeeName')) {
+    document.addEventListener('DOMContentLoaded', function() {
+        // ... (istniejący kod) ...
+        
+        // DODAJ TE LINIE:
+        addReportButtons();
+        
+        // Dodaj biblioteki do generowania PDF
+        addPDFLibraries();
+        
+        // ... (reszta kodu) ...
+    });
+}
+
+// NOWA FUNKCJA: Dodaj biblioteki PDF
+function addPDFLibraries() {
+    // Sprawdź czy biblioteki już zostały dodane
+    if (window.jspdf && window.html2canvas) return;
+    
+    // Dodaj jsPDF
+    const jspdfScript = document.createElement('script');
+    jspdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    document.head.appendChild(jspdfScript);
+    
+    // Dodaj html2canvas
+    const html2canvasScript = document.createElement('script');
+    html2canvasScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    document.head.appendChild(html2canvasScript);
+}
+
+// Eksportuj nowe funkcje
+window.exportReservationsToPDF = exportReservationsToPDF;
+window.generateMonthlyReports = generateMonthlyReports;
+window.exportAllReservationsToExcel = exportAllReservationsToExcel;
 // ===== KALENDARZ MIESIĄCA =====
 function initMonthCalendar() {
     if (!document.getElementById('monthCalendar')) return;
@@ -1080,4 +1448,5 @@ window.deleteUserReservation = deleteUserReservation;
 window.cancelUserReservation = cancelUserReservation;
 window.exportToPDF = exportToPDF;
 window.generateMonthlyReport = generateMonthlyReport;
+
 
