@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raporty miesięczne - Rezerwacje aut</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-chart-bar"></i> Raporty miesięczne - Rezerwacje aut służbowych</h1>
+            <div class="user-info">
+                <span id="userDisplay">Administrator</span>
+                <button onclick="window.location.href='index.html'" class="btn-logout">
+                    <i class="fas fa-arrow-left"></i> Powrót
+                </button>
+            </div>
+        </header>
+        
+        <main>
+            <div class="reports-container">
+                <h2><i class="fas fa-filter"></i> Wybierz okres raportowania</h2>
+                
+                <div class="report-filters">
+                    <div class="filter-item">
+                        <label for="reportMonth"><i class="fas fa-calendar"></i> Miesiąc</label>
+                        <select id="reportMonth" class="form-control">
+                            <option value="1">Styczeń</option>
+                            <option value="2">Luty</option>
+                            <option value="3">Marzec</option>
+                            <option value="4">Kwiecień</option>
+                            <option value="5">Maj</option>
+                            <option value="6">Czerwiec</option>
+                            <option value="7">Lipiec</option>
+                            <option value="8">Sierpień</option>
+                            <option value="9">Wrzesień</option>
+                            <option value="10">Październik</option>
+                            <option value="11">Listopad</option>
+                            <option value="12">Grudzień</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="reportYear"><i class="fas fa-calendar-alt"></i> Rok</label>
+                        <select id="reportYear" class="form-control">
+                            <option value="2023">2023</option>
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label for="reportType"><i class="fas fa-chart-line"></i> Typ raportu</label>
+                        <select id="reportType" class="form-control">
+                            <option value="summary">Podsumowanie</option>
+                            <option value="detailed">Szczegółowy</option>
+                            <option value="byCar">Według aut</option>
+                            <option value="byDepartment">Według działów</option>
+                            <option value="byEmployee">Według pracowników</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-actions">
+                        <button id="generateReport" class="btn-filter">
+                            <i class="fas fa-play"></i> Generuj raport
+                        </button>
+                        <button id="exportReport" class="btn-export pdf" disabled>
+                            <i class="fas fa-file-pdf"></i> Eksportuj do PDF
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="report-content">
+                    <div id="reportResults" class="hidden">
+                        <!-- Wyniki raportu będą ładowane dynamicznie -->
+                    </div>
+                    
+                    <div id="noReport" class="text-center" style="padding: 50px; color: #666;">
+                        <i class="fas fa-chart-bar" style="font-size: 48px; margin-bottom: 20px;"></i>
+                        <h3>Wybierz parametry i wygeneruj raport</h3>
+                        <p>Raport zostanie wyświetlony w tej sekcji po kliknięciu "Generuj raport"</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h3><i class="fas fa-info-circle"></i> Informacje o raportach</h3>
+                <div class="instructions">
+                    <h4><i class="fas fa-list-ol"></i> Dostępne raporty:</h4>
+                    <ol>
+                        <li><strong>Podsumowanie</strong> - ogólne statystyki miesiąca</li>
+                        <li><strong>Szczegółowy</strong> - lista wszystkich rezerwacji z danego miesiąca</li>
+                        <li><strong>Według aut</strong> - statystyki wykorzystania każdego auta</li>
+                        <li><strong>Według działów</strong> - analiza rezerwacji według działów firmy</li>
+                        <li><strong>Według pracowników</strong> - aktywność rezerwacyjna pracowników</li>
+                    </ol>
+                    
+                    <div class="note">
+                        <p><strong>Uwaga:</strong> Raporty automatycznie wykluczają anulowane rezerwacje i rezerwacje starsze niż 6 miesięcy.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>© 2023 System Rezerwacji Aut Służbowych | Raporty miesięczne</p>
+            <p id="lastUpdate">Ostatnia aktualizacja: --</p>
+        </footer>
+    </div>
+    
+    <script src="monthly-reports-script.js"></script>
+</body>
+</html>

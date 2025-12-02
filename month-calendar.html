@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalendarz miesiąca - Rezerwacje aut</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-calendar-alt"></i> Kalendarz miesiąca - Rezerwacje aut służbowych</h1>
+            <div class="user-info">
+                <span id="userDisplay">Administrator</span>
+                <button onclick="window.location.href='index.html'" class="btn-logout">
+                    <i class="fas fa-arrow-left"></i> Powrót
+                </button>
+            </div>
+        </header>
+        
+        <main>
+            <div class="month-calendar-container">
+                <div id="monthCalendar"></div>
+                
+                <div class="calendar-legend">
+                    <div class="legend-item">
+                        <div class="legend-color legend-today"></div>
+                        <span>Dzisiejszy dzień</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-reserved"></div>
+                        <span>Zajęte (inne osoby)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-my-reservation"></div>
+                        <span>Twoje rezerwacje</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h3><i class="fas fa-info-circle"></i> Instrukcja kalendarza</h3>
+                <div class="instructions">
+                    <h4><i class="fas fa-list-ol"></i> Jak czytać kalendarz:</h4>
+                    <ol>
+                        <li><strong>Zajęte dni</strong> są oznaczone na czerwono - auto jest zarezerwowane przez innych pracowników</li>
+                        <li><strong>Twoje rezerwacje</strong> są oznaczone na niebiesko</li>
+                        <li><strong>Dzisiejszy dzień</strong> jest obramowany niebieską linią</li>
+                        <li><strong>Najedź myszką</strong> na zajęty dzień, aby zobaczyć szczegóły rezerwacji</li>
+                    </ol>
+                    
+                    <h4><i class="fas fa-chart-bar"></i> Statystyki bieżącego miesiąca:</h4>
+                    <div id="monthStats" class="summary-stats">
+                        <!-- Statystyki będą ładowane dynamicznie -->
+                    </div>
+                    
+                    <div class="export-options">
+                        <button class="btn-export pdf" onclick="exportMonthCalendarPDF()">
+                            <i class="fas fa-file-pdf"></i> Eksportuj do PDF
+                        </button>
+                        <button class="btn-export" onclick="printMonthCalendar()">
+                            <i class="fas fa-print"></i> Drukuj kalendarz
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>© 2023 System Rezerwacji Aut Służbowych | Kalendarz miesiąca</p>
+            <p id="lastUpdate">Ostatnia aktualizacja: --</p>
+        </footer>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
+    <script src="script.js"></script>
+    <script src="month-calendar-script.js"></script>
+</body>
+</html>
