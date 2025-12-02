@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zarządzanie rezerwacjami - Administrator</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-calendar-alt"></i> Zarządzanie rezerwacjami aut służbowych</h1>
+            <div class="user-info">
+                <span id="userDisplay">Administrator</span>
+                <button onclick="window.location.href='index.html'" class="btn-logout">
+                    <i class="fas fa-arrow-left"></i> Powrót
+                </button>
+            </div>
+        </header>
+        
+        <main>
+            <div class="admin-section">
+                <h2><i class="fas fa-list-alt"></i> Wszystkie rezerwacje</h2>
+                
+                <div class="filter-section">
+                    <h3><i class="fas fa-filter"></i> Filtruj rezerwacje</h3>
+                    <div class="filter-group">
+                        <div class="filter-item">
+                            <label for="filterCar"><i class="fas fa-car"></i> Auto</label>
+                            <select id="filterCar" class="form-control">
+                                <option value="">Wszystkie auta</option>
+                                <option value="Auto1">Toyota Corolla (KR 12345)</option>
+                                <option value="Auto2">Volkswagen Passat (KR 23456)</option>
+                                <option value="Auto3">Skoda Octavia (KR 34567)</option>
+                                <option value="Auto4">Ford Focus (KR 45678)</option>
+                                <option value="Auto5">Opel Astra (KR 56789)</option>
+                                <option value="Auto6">Hyundai i30 (KR 67890)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-item">
+                            <label for="filterEmployee"><i class="fas fa-user"></i> Pracownik</label>
+                            <input type="text" id="filterEmployee" class="form-control" placeholder="Wpisz nazwisko...">
+                        </div>
+                        
+                        <div class="filter-item">
+                            <label for="filterDateRange"><i class="fas fa-calendar"></i> Okres</label>
+                            <input type="text" id="filterDateRange" class="form-control" placeholder="Wybierz zakres dat...">
+                        </div>
+                        
+                        <div class="filter-actions">
+                            <button id="applyFilter" class="btn-filter">
+                                <i class="fas fa-search"></i> Filtruj
+                            </button>
+                            <button id="resetFilter" class="btn-reset">
+                                <i class="fas fa-redo"></i> Resetuj
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="reservations-list">
+                    <div class="table-responsive">
+                        <table class="reservation-list-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Auto</th>
+                                    <th>Pracownik</th>
+                                    <th>Okres rezerwacji</th>
+                                    <th>Cel wyjazdu</th>
+                                    <th>Status</th>
+                                    <th>Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reservationsTableBody">
+                                <!-- Rezerwacje będą ładowane dynamicznie -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="reservations-summary">
+                    <h3><i class="fas fa-chart-bar"></i> Podsumowanie</h3>
+                    <div id="summaryStats" class="summary-stats">
+                        <!-- Statystyki będą ładowane dynamicznie -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h3><i class="fas fa-info-circle"></i> Instrukcja zarządzania rezerwacjami</h3>
+                <div class="instructions">
+                    <h4><i class="fas fa-list-ol"></i> Dostępne akcje:</h4>
+                    <ol>
+                        <li><strong>Podgląd rezerwacji:</strong> Kliknij przycisk "Podgląd" aby zobaczyć szczegóły</li>
+                        <li><strong>Edycja rezerwacji:</strong> Kliknij przycisk "Edytuj" aby zmienić dane rezerwacji</li>
+                        <li><strong>Usunięcie rezerwacji:</strong> Kliknij przycisk "Usuń" aby usunąć rezerwację</li>
+                        <li><strong>Filtrowanie:</strong> Użyj filtrów aby znaleźć konkretne rezerwacje</li>
+                    </ol>
+                    
+                    <h4><i class="fas fa-exclamation-triangle"></i> Uwagi:</h4>
+                    <ul>
+                        <li>Usunięcie rezerwacji jest nieodwracalne</li>
+                        <li>Edycja rezerwacji może wpłynąć na dostępność auta dla innych pracowników</li>
+                        <li>Aktywne rezerwacje to te, które jeszcze się nie rozpoczęły lub trwają</li>
+                        <li>Zakończone rezerwacje są oznaczone na szaro</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>© 2023 System Rezerwacji Aut Służbowych | Zarządzanie rezerwacjami</p>
+            <p id="lastUpdate">Ostatnia aktualizacja: --</p>
+        </footer>
+    </div>
+    
+    <!-- Modal do podglądu rezerwacji -->
+    <div id="reservationModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalReservationTitle">Szczegóły rezerwacji</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="reservationDetails">
+                    <!-- Szczegóły rezerwacji będą ładowane dynamicznie -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
+    <script src="reservations-management-script.js"></script>
+</body>
+</html>
