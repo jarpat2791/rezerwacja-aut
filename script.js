@@ -439,6 +439,480 @@ function formatDate(dateString) {
         year: 'numeric'
     });
 }
+// ===== OBSŁUGA REZERWACJI =====
+function updateCalendarAvailability() {
+    if (!selectedCar || !flatpickrInstance) return;
+    
+    // Pobierz rezerwacje dla wybranego auta
+    const carReservations = reservations.filter(r => 
+        r.carId === selectedCar && 
+        r.id !== editingReservationId && 
+        r.status !== 'cancelled'
+    );
+    
+    // Utwórz tablicę z zajętymi datami
+    const disabledDates = [];
+    
+    carReservations.forEach(reservation => {
+        const startDate = new Date(reservation.startDate);
+        const endDate = new Date(reservation.endDate);
+        
+        // Dodaj wszystkie daty z zakresu rezerwacji jako niedostępne
+        const currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            disabledDates.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+    });
+    
+    // Zaktualizuj kalendarz
+    flatpickrInstance.set('disable', disabledDates);
+    
+    // Dodatkowe informacje o zajętych terminach
+    if (carReservations.length > 0) {
+        console.log('Zajęte terminy dla', selectedCar, ':', carReservations);
+    }
+}
+
+// ===== ZATWIERDZANIE REZERWACJI =====
+function submitReservation() {
+    const user = getCurrentUser();
+    if (!user) return;
+    
+    const selectedDates = flatpickrInstance ? flatpickrInstance.selectedDates : [];
+    
+    if (!selectedCar) {
+        showMessage('message', 'Wybierz auto', 'error');
+        return;
+    }
+    
+    if (selectedDates.length !== 2) {
+        showMessage('message', 'Wybierz zakres dat (kliknij dzień rozpoczęcia i zakończenia)', 'error');
+        return;
+    }
+    
+    const startDate = selectedDates[0];
+    const endDate = selectedDates[1];
+    const diffTime = Math.abs(endDate - startDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    
+    if (diffDays > 7) {
+        showMessage('message', 'Możesz zarezerwować auto maksymalnie na 7 dni', 'error');
+        return;
+    }
+    
+    // POPRAWIONE: Sprawdź czy auto jest dostępne w wybranym okresie
+    const isAvailable = checkCarAvailability(selectedCar, startDate, endDate, editingReservationId);
+    
+    if (!isAvailable.available) {
+        showMessage('message', `Auto jest już zarezerwowane w wybranym okresie. Konflikt z rezerwacją: ${isAvailable.conflictInfo}`, 'error');
+        return;
+    }
+    
+    // POPRAWIONE: Zapewnij poprawny format dat
+    const startDateStr = formatDateForStorage(startDate);
+    const endDateStr = formatDateForStorage(endDate);
+    
+    // Przygotuj dane rezerwacji
+    const reservationData = {
+        id: editingReservationId || generateReservationId(),
+        carId: selectedCar,
+        carName: CARS.find(c => c.id === selectedCar)?.name || selectedCar,
+        employeeName: document.getElementById('employeeName').value,
+        department: document.getElementById('employeeDepartment').value,
+        startDate: startDateStr,
+        endDate: endDateStr,
+        purpose: document.getElementById('purpose').value,
+        bookingDate: new Date().toISOString().split('T')[0],
+        login: editingReservationId ? reservations.find(r => r.id === editingReservationId)?.login : user.login,
+        status: 'active',
+        daysCount: diffDays
+    };
+    
+    if (editingReservationId) {
+        // Aktualizuj istniejącą rezerwację
+        const index = reservations.findIndex(r => r.id === editingReservationId);
+        if (index !== -1) {
+            reservations[index] = reservationData;
+        }
+    } else {
+        // Dodaj nową rezerwację
+        reservations.push(reservationData);
+    }
+    
+    saveReservationsToStorage();
+    
+    showMessage('message', editingReservationId ? 'Rezerwacja została zaktualizowana!' : 'Rezerwacja została zapisana!', 'success');
+    
+    // Zresetuj formularz
+    resetReservationForm();
+    
+    // Odśwież wyświetlane dane
+    updateCarAvailabilityDisplay();
+    updateUserReservationsDisplay();
+    updateCalendarAvailability();
+    
+    // Aktualizuj kalendarz miesiąca jeśli istnieje
+    if (monthCalendarInstance) {
+        updateMonthCalendarDisplay();
+    }
+    
+    // Aktualizuj datę ostatniej aktualizacji
+    const lastUpdateElement = document.getElementById('lastUpdate');
+    if (lastUpdateElement) {
+        lastUpdateElement.textContent = `Ostatnia aktualizacja: ${new Date().toLocaleString('pl-PL')}`;
+    }
+}
+
+// NOWA FUNKCJA: Sprawdzanie dostępności auta
+function checkCarAvailability(carId, startDate, endDate, excludeReservationId = null) {
+    const carReservations = reservations.filter(r => 
+        r.carId === carId && 
+        r.id !== excludeReservationId && 
+        r.status !== 'cancelled'
+    );
+    
+    // Normalizuj daty (ustaw godzinę na 00:00:00)
+    const normalizedStart = new Date(startDate);
+    normalizedStart.setHours(0, 0, 0, 0);
+    
+    const normalizedEnd = new Date(endDate);
+    normalizedEnd.setHours(0, 0, 0, 0);
+    
+    // Sprawdź każdą istniejącą rezerwację
+    for (const reservation of carReservations) {
+        const resStart = new Date(reservation.startDate);
+        resStart.setHours(0, 0, 0, 0);
+        
+        const resEnd = new Date(reservation.endDate);
+        resEnd.setHours(0, 0, 0, 0);
+        
+        // Sprawdź czy zakresy się nakładają
+        // Warunek nakładania się zakresów:
+        // 1. Nowa rezerwacja zaczyna się podczas istniejącej rezerwacji
+        // 2. Nowa rezerwacja kończy się podczas istniejącej rezerwacji
+        // 3. Nowa rezerwacja całkowicie zawiera istniejącą rezerwację
+        // 4. Istniejąca rezerwacja całkowicie zawiera nową rezerwację
+        
+        const conflictExists = 
+            (normalizedStart >= resStart && normalizedStart <= resEnd) || // Nowa zaczyna się podczas istniejącej
+            (normalizedEnd >= resStart && normalizedEnd <= resEnd) ||     // Nowa kończy się podczas istniejącej
+            (normalizedStart <= resStart && normalizedEnd >= resEnd) ||   // Nowa zawiera istniejącą
+            (resStart <= normalizedStart && resEnd >= normalizedEnd);     // Istniejąca zawiera nową
+        
+        if (conflictExists) {
+            return {
+                available: false,
+                conflictInfo: `${reservation.employeeName} (${formatDate(reservation.startDate)} - ${formatDate(reservation.endDate)})`
+            };
+        }
+    }
+    
+    return {
+        available: true,
+        conflictInfo: null
+    };
+}
+
+// NOWA FUNKCJA: Wizualne oznaczenie zajętych dat
+function highlightUnavailableDates() {
+    if (!selectedCar || !flatpickrInstance) return;
+    
+    const carReservations = reservations.filter(r => 
+        r.carId === selectedCar && 
+        r.id !== editingReservationId && 
+        r.status !== 'cancelled'
+    );
+    
+    // Pobierz wszystkie dni w kalendarzu
+    const calendarDays = document.querySelectorAll('.flatpickr-day');
+    
+    calendarDays.forEach(day => {
+        // Resetuj styl
+        day.classList.remove('unavailable-date');
+        day.classList.remove('partially-unavailable');
+        
+        const dayDate = day.dateObj;
+        if (!dayDate) return;
+        
+        // Normalizuj datę dnia
+        const normalizedDay = new Date(dayDate);
+        normalizedDay.setHours(0, 0, 0, 0);
+        
+        // Sprawdź czy dzień jest zajęty
+        let isUnavailable = false;
+        let reservationInfo = '';
+        
+        for (const reservation of carReservations) {
+            const resStart = new Date(reservation.startDate);
+            resStart.setHours(0, 0, 0, 0);
+            
+            const resEnd = new Date(reservation.endDate);
+            resEnd.setHours(0, 0, 0, 0);
+            
+            if (normalizedDay >= resStart && normalizedDay <= resEnd) {
+                isUnavailable = true;
+                reservationInfo = `Zajęte przez: ${reservation.employeeName}`;
+                break;
+            }
+        }
+        
+        if (isUnavailable && !day.classList.contains('disabled')) {
+            day.classList.add('unavailable-date');
+            
+            // Dodaj tooltip z informacją
+            day.title = reservationInfo;
+        }
+    });
+}
+
+// Zaktualizuj funkcję initReservationCalendar
+function initReservationCalendar() {
+    if (!document.getElementById('reservationDates')) return;
+    
+    flatpickrInstance = flatpickr("#reservationDates", {
+        mode: "range",
+        dateFormat: "Y-m-d",
+        locale: "pl",
+        minDate: "today",
+        maxDate: new Date().fp_incr(90),
+        disableMobile: true,
+        allowInput: false,
+        clickOpens: true,
+        time_24hr: true,
+        onReady: function(selectedDates, dateStr, instance) {
+            instance.set('altInput', true);
+            instance.set('altFormat', 'd.m.Y');
+            
+            // Oznacz zajęte daty po załadowaniu kalendarza
+            setTimeout(() => highlightUnavailableDates(), 100);
+        },
+        onChange: function(selectedDates, dateStr, instance) {
+            if (selectedDates.length === 2) {
+                const startDate = selectedDates[0];
+                const endDate = selectedDates[1];
+                const diffTime = Math.abs(endDate - startDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                
+                if (diffDays > 7) {
+                    showMessage('message', 'Możesz zarezerwować auto maksymalnie na 7 dni', 'error');
+                    instance.clear();
+                    return;
+                }
+                
+                // SPRAWDŹ DOSTĘPNOŚĆ NA BIERZĄCO
+                if (selectedCar) {
+                    const availability = checkCarAvailability(selectedCar, startDate, endDate, editingReservationId);
+                    if (!availability.available) {
+                        showMessage('message', `Auto jest już zarezerwowane w tym terminie! Konflikt: ${availability.conflictInfo}`, 'error');
+                        instance.clear();
+                        return;
+                    }
+                }
+                
+                const formattedStart = formatDateForDisplay(startDate);
+                const formattedEnd = formatDateForDisplay(endDate);
+                
+                instance.input.value = `${formattedStart} do ${formattedEnd}`;
+            } else if (selectedDates.length === 1) {
+                const selectedDate = selectedDates[0];
+                const formattedDate = formatDateForDisplay(selectedDate);
+                instance.input.value = `${formattedDate} (kliknij ten sam dzień dla rezerwacji 1-dniowej)`;
+            }
+            
+            // Oznacz zajęte daty po zmianie
+            highlightUnavailableDates();
+        },
+        onMonthChange: function() {
+            // Oznacz zajęte daty przy zmianie miesiąca
+            setTimeout(() => highlightUnavailableDates(), 100);
+        },
+        onOpen: function() {
+            // Oznacz zajęte daty przy otwarciu kalendarza
+            setTimeout(() => highlightUnavailableDates(), 100);
+        },
+        onClose: function(selectedDates, dateStr, instance) {
+            if (selectedDates.length === 2) {
+                const startDate = selectedDates[0];
+                const endDate = selectedDates[1];
+                const formattedStart = formatDateForDisplay(startDate);
+                const formattedEnd = formatDateForDisplay(endDate);
+                instance.input.value = `${formattedStart} do ${formattedEnd}`;
+            } else if (selectedDates.length === 1) {
+                const singleDate = selectedDates[0];
+                instance.setDate([singleDate, singleDate], true);
+                const formattedDate = formatDateForDisplay(singleDate);
+                instance.input.value = `${formattedDate} (1 dzień)`;
+            }
+        }
+    });
+}
+
+// Zaktualizuj funkcję obsługi zmiany auta
+if (document.getElementById('employeeName')) {
+    document.addEventListener('DOMContentLoaded', function() {
+        // ... (istniejący kod) ...
+        
+        // Obsługa zmiany wyboru auta
+        document.getElementById('carSelect').addEventListener('change', function() {
+            selectedCar = this.value;
+            const calendarSection = document.getElementById('calendarSection');
+            
+            if (selectedCar) {
+                calendarSection.classList.remove('hidden');
+                updateCalendarAvailability();
+                
+                // Oznacz zajęte daty
+                setTimeout(() => highlightUnavailableDates(), 100);
+                
+                // Pobierz informacje o najbliższych rezerwacjach
+                showNextAvailableDates(selectedCar);
+            } else {
+                calendarSection.classList.add('hidden');
+            }
+        });
+        
+        // ... (reszta kodu) ...
+    });
+}
+
+// NOWA FUNKCJA: Pokazuj najbliższe dostępne terminy
+function showNextAvailableDates(carId) {
+    const carReservations = reservations.filter(r => 
+        r.carId === carId && 
+        r.status !== 'cancelled'
+    ).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let nextAvailableFrom = today;
+    
+    // Znajdź najbliższy wolny termin
+    for (const reservation of carReservations) {
+        const resStart = new Date(reservation.startDate);
+        resStart.setHours(0, 0, 0, 0);
+        
+        const resEnd = new Date(reservation.endDate);
+        resEnd.setHours(0, 0, 0, 0);
+        
+        // Jeśli rezerwacja jest w przyszłości
+        if (resStart > today) {
+            // Sprawdź czy jest przerwa między obecną datą a początkiem rezerwacji
+            const gap = Math.ceil((resStart - nextAvailableFrom) / (1000 * 60 * 60 * 24));
+            
+            if (gap > 0) {
+                // Znaleziono wolny termin
+                const availableInfo = document.getElementById('availabilityInfo');
+                if (!availableInfo) {
+                    const formGroup = document.querySelector('#calendarSection .form-group');
+                    if (formGroup) {
+                        const infoDiv = document.createElement('div');
+                        infoDiv.id = 'availabilityInfo';
+                        infoDiv.className = 'availability-info';
+                        formGroup.appendChild(infoDiv);
+                    }
+                }
+                
+                const infoDiv = document.getElementById('availabilityInfo');
+                if (infoDiv) {
+                    infoDiv.innerHTML = `
+                        <div class="availability-message">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Auto dostępne od ${formatDateForDisplay(nextAvailableFrom)} do ${formatDateForDisplay(new Date(resStart.getTime() - 24 * 60 * 60 * 1000))}</span>
+                        </div>
+                    `;
+                }
+                
+                return;
+            }
+            
+            // Ustaw datę na dzień po zakończeniu rezerwacji
+            nextAvailableFrom = new Date(resEnd.getTime() + 24 * 60 * 60 * 1000);
+        } else if (resEnd >= today) {
+            // Rezerwacja trwa lub właśnie się zakończyła
+            nextAvailableFrom = new Date(resEnd.getTime() + 24 * 60 * 60 * 1000);
+        }
+    }
+    
+    // Jeśli nie ma żadnych konfliktów
+    const infoDiv = document.getElementById('availabilityInfo');
+    if (infoDiv) {
+        infoDiv.innerHTML = `
+            <div class="availability-message available">
+                <i class="fas fa-check-circle"></i>
+                <span>Auto dostępne od ${formatDateForDisplay(nextAvailableFrom)}</span>
+            </div>
+        `;
+    }
+}
+
+// ===== DODATKOWE FUNKCJE POMOCNICZE =====
+
+// Funkcja sprawdzająca nakładanie się rezerwacji przy ładowaniu
+function validateReservations() {
+    const conflicts = [];
+    
+    // Dla każdego auta sprawdź nakładanie się rezerwacji
+    CARS.forEach(car => {
+        const carReservations = reservations.filter(r => 
+            r.carId === car.id && 
+            r.status !== 'cancelled'
+        ).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+        
+        // Sprawdź każdą parę rezerwacji
+        for (let i = 0; i < carReservations.length; i++) {
+            for (let j = i + 1; j < carReservations.length; j++) {
+                const res1 = carReservations[i];
+                const res2 = carReservations[j];
+                
+                const start1 = new Date(res1.startDate);
+                const end1 = new Date(res1.endDate);
+                const start2 = new Date(res2.startDate);
+                const end2 = new Date(res2.endDate);
+                
+                // Sprawdź nakładanie
+                if (!(end1 < start2 || start1 > end2)) {
+                    conflicts.push({
+                        car: car.name,
+                        reservation1: `${res1.employeeName} (${formatDate(res1.startDate)} - ${formatDate(res1.endDate)})`,
+                        reservation2: `${res2.employeeName} (${formatDate(res2.startDate)} - ${formatDate(res2.endDate)})`
+                    });
+                }
+            }
+        }
+    });
+    
+    if (conflicts.length > 0) {
+        console.warn('Znaleziono konflikty w rezerwacjach:', conflicts);
+        
+        // Możesz dodać powiadomienie dla administratora
+        if (currentUser && (currentUser.role === 'admin' || currentUser.login === 'admin')) {
+            showMessage('message', `Uwaga: Znaleziono ${conflicts.length} konfliktów w rezerwacjach. Sprawdź konsolę.`, 'warning');
+        }
+    }
+    
+    return conflicts;
+}
+
+// Dodaj walidację przy ładowaniu rezerwacji
+function loadReservations() {
+    // ... (istniejący kod) ...
+    
+    if (savedReservations) {
+        reservations = JSON.parse(savedReservations);
+        
+        // Wyczyść stare rezerwacje
+        cleanOldReservations();
+        
+        // WALIDACJA: Sprawdź czy nie ma konfliktów
+        validateReservations();
+    } else {
+        // ... (reszta kodu) ...
+    }
+    
+    // ... (reszta funkcji) ...
+}
 
 // ===== ROZSZERZENIE O FUNKCJE RAPORTOWANIA =====
 function exportReservationsToPDF() {
@@ -1448,5 +1922,6 @@ window.deleteUserReservation = deleteUserReservation;
 window.cancelUserReservation = cancelUserReservation;
 window.exportToPDF = exportToPDF;
 window.generateMonthlyReport = generateMonthlyReport;
+
 
 
