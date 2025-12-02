@@ -8,12 +8,12 @@ const VALID_USERS = [
 
 // Dane aut
 const CARS = [
-    { id: "Auto1", name: "Skoda Octavia 1", plate: "RZ 12345" },
-    { id: "Auto2", name: "Skoda Octavia 2", plate: "RZ 23456" },
-    { id: "Auto3", name: "Skoda Octavia 3", plate: "RZ 34567" },
-    { id: "Auto4", name: " Skoda Superb", plate: "RZ 45678" },
-    { id: "Auto5", name: "Hyundai Tucson 1", plate: "RZ 56789" },
-    { id: "Auto6", name: "Hyundai Tucson 2", plate: "RZ 67890" }
+    { id: "Auto1", name: "Toyota Corolla", plate: "KR 12345" },
+    { id: "Auto2", name: "Volkswagen Passat", plate: "KR 23456" },
+    { id: "Auto3", name: "Skoda Octavia", plate: "KR 34567" },
+    { id: "Auto4", name: "Ford Focus", plate: "KR 45678" },
+    { id: "Auto5", name: "Opel Astra", plate: "KR 56789" },
+    { id: "Auto6", name: "Hyundai i30", plate: "KR 67890" }
 ];
 
 // URL Google Apps Script (do zastąpienia własnym)
@@ -43,14 +43,16 @@ function clearCurrentUser() {
 
 function showMessage(elementId, message, type = "info") {
     const messageElement = document.getElementById(elementId);
-    messageElement.textContent = message;
-    messageElement.className = `message ${type}`;
-    messageElement.style.display = 'block';
-    
-    if (type === "success") {
-        setTimeout(() => {
-            messageElement.style.display = 'none';
-        }, 5000);
+    if (messageElement) {
+        messageElement.textContent = message;
+        messageElement.className = `message ${type}`;
+        messageElement.style.display = 'block';
+        
+        if (type === "success") {
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 5000);
+        }
     }
 }
 
@@ -106,6 +108,21 @@ if (document.getElementById('employeeName')) {
         if (!user) {
             window.location.href = 'login.html';
             return;
+        }
+        
+        // Sprawdź czy jest ustawiony parametr edycji rezerwacji
+        const editReservationId = localStorage.getItem('editReservationId');
+        if (editReservationId) {
+            // Znajdź rezerwację
+            const reservationToEdit = reservations.find(r => r.id === editReservationId);
+            if (reservationToEdit) {
+                // Ustaw opóźnienie, aby formularz się załadował
+                setTimeout(() => {
+                    editUserReservation(editReservationId);
+                }, 500);
+            }
+            // Wyczyść parametr
+            localStorage.removeItem('editReservationId');
         }
         
         // Ustaw informacje o użytkowniku
@@ -219,26 +236,21 @@ function initCalendar() {
                     return;
                 }
                 
-                // Upewnij się, że daty są ustawione poprawnie
-                console.log('Wybrane daty:', startDate.toISOString().split('T')[0], 'do', endDate.toISOString().split('T')[0]);
+                // Upewnij się, że daty są poprawnie sformatowane
+                const formattedStart = startDate.toISOString().split('T')[0];
+                const formattedEnd = endDate.toISOString().split('T')[0];
+                console.log('Wybrane daty:', formattedStart, 'do', formattedEnd);
             }
         },
-        onReady: function(selectedDates, dateStr, instance) {
-            // Dodaj obsługę manualnego wprowadzania dat
-            const input = instance.input;
-            input.addEventListener('blur', function() {
-                const value = this.value;
-                if (value) {
-                    const dates = value.split(' do ');
-                    if (dates.length === 2) {
-                        const startDate = instance.parseDate(dates[0], 'Y-m-d');
-                        const endDate = instance.parseDate(dates[1], 'Y-m-d');
-                        if (startDate && endDate) {
-                            instance.setDate([startDate, endDate], true);
-                        }
-                    }
-                }
-            });
+        onClose: function(selectedDates, dateStr, instance) {
+            // Upewnij się, że data jest poprawnie wyświetlana po zamknięciu kalendarza
+            if (selectedDates.length === 2) {
+                const startDate = selectedDates[0];
+                const endDate = selectedDates[1];
+                const formattedStart = startDate.toISOString().split('T')[0];
+                const formattedEnd = endDate.toISOString().split('T')[0];
+                instance.input.value = `${formattedStart} do ${formattedEnd}`;
+            }
         }
     });
 }
@@ -326,6 +338,8 @@ function getDateString(daysFromNow) {
 // Wyświetlanie dostępności aut
 function updateCarAvailabilityDisplay() {
     const container = document.getElementById('carAvailability');
+    if (!container) return;
+    
     container.innerHTML = '';
     
     CARS.forEach(car => {
@@ -375,6 +389,8 @@ function updateUserReservationsDisplay() {
     if (!user) return;
     
     const container = document.getElementById('userReservations');
+    if (!container) return;
+    
     container.innerHTML = '';
     
     const userReservations = reservations.filter(r => r.login === user.login);
@@ -418,10 +434,19 @@ function updateUserReservationsDisplay() {
     });
 }
 
-// Edycja rezerwacji użytkownika (dla admina)
+// Edycja rezerwacji użytkownika (dla admina i właściciela rezerwacji)
 function editUserReservation(reservationId) {
     const reservation = reservations.find(r => r.id === reservationId);
     if (!reservation) return;
+    
+    const user = getCurrentUser();
+    if (!user) return;
+    
+    // Sprawdź uprawnienia (admin lub właściciel rezerwacji)
+    if (user.role !== 'admin' && user.login !== 'admin' && reservation.login !== user.login) {
+        showMessage('message', 'Brak uprawnień do edycji tej rezerwacji', 'error');
+        return;
+    }
     
     // Wypełnij formularz danymi rezerwacji
     document.getElementById('employeeName').value = reservation.employeeName;
@@ -431,27 +456,40 @@ function editUserReservation(reservationId) {
     
     // Ustaw wybrane auto
     selectedCar = reservation.carId;
-    document.getElementById('calendarSection').classList.remove('hidden');
+    const calendarSection = document.getElementById('calendarSection');
+    calendarSection.classList.remove('hidden');
     
-    // Ustaw daty w kalendarzu
+    // Ustaw daty w kalendarzu - POPRAWIONA WERSJA
     const startDate = new Date(reservation.startDate);
     const endDate = new Date(reservation.endDate);
     
-    // Ustawienie dat w flatpickr
-    flatpickrInstance.setDate([startDate, endDate], true);
+    // Ustawienie dat w flatpickr - upewnij się że kalendarz jest zainicjalizowany
+    if (flatpickrInstance) {
+        flatpickrInstance.setDate([startDate, endDate], false);
+        
+        // Upewnij się, że data jest poprawnie ustawiona w polu input
+        const formattedStart = startDate.toISOString().split('T')[0];
+        const formattedEnd = endDate.toISOString().split('T')[0];
+        document.getElementById('reservationDates').value = `${formattedStart} do ${formattedEnd}`;
+    }
     
     // Ustaw tryb edycji
     editingReservationId = reservationId;
     
     // Zmień tekst przycisku
     const submitBtn = document.querySelector('.btn-submit');
-    submitBtn.innerHTML = '<i class="fas fa-save"></i> Zaktualizuj rezerwację';
+    if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Zaktualizuj rezerwację';
+    }
     
     // Zaktualizuj dostępność kalendarza
     updateCalendarAvailability();
     
     // Przewiń do formularza
-    document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+    const formSection = document.querySelector('.form-section');
+    if (formSection) {
+        formSection.scrollIntoView({ behavior: 'smooth' });
+    }
     
     showMessage('message', 'Edytujesz rezerwację. Możesz zmienić dane i zapisać zmiany.', 'info');
 }
@@ -497,7 +535,7 @@ function submitReservation() {
     const user = getCurrentUser();
     if (!user) return;
     
-    const selectedDates = flatpickrInstance.selectedDates;
+    const selectedDates = flatpickrInstance ? flatpickrInstance.selectedDates : [];
     
     if (!selectedCar) {
         showMessage('message', 'Wybierz auto', 'error');
@@ -538,7 +576,7 @@ function submitReservation() {
     const reservationData = {
         id: editingReservationId || generateReservationId(),
         carId: selectedCar,
-        carName: CARS.find(c => c.id === selectedCar).name,
+        carName: CARS.find(c => c.id === selectedCar)?.name || selectedCar,
         employeeName: document.getElementById('employeeName').value,
         department: document.getElementById('employeeDepartment').value,
         startDate: startDate.toISOString().split('T')[0],
@@ -572,31 +610,62 @@ function submitReservation() {
     updateCalendarAvailability();
     
     // Aktualizuj datę ostatniej aktualizacji
-    document.getElementById('lastUpdate').textContent = 
-        `Ostatnia aktualizacja: ${new Date().toLocaleString('pl-PL')}`;
+    const lastUpdateElement = document.getElementById('lastUpdate');
+    if (lastUpdateElement) {
+        lastUpdateElement.textContent = `Ostatnia aktualizacja: ${new Date().toLocaleString('pl-PL')}`;
+    }
 }
 
 // Resetowanie formularza rezerwacji
 function resetReservationForm() {
-    document.getElementById('reservationForm').reset();
-    document.getElementById('employeeName').value = currentUser.name;
-    document.getElementById('calendarSection').classList.add('hidden');
-    document.getElementById('carSelect').value = '';
+    const form = document.getElementById('reservationForm');
+    if (form) {
+        form.reset();
+    }
+    
+    const employeeNameInput = document.getElementById('employeeName');
+    if (employeeNameInput && currentUser) {
+        employeeNameInput.value = currentUser.name;
+    }
+    
+    const calendarSection = document.getElementById('calendarSection');
+    if (calendarSection) {
+        calendarSection.classList.add('hidden');
+    }
+    
+    const carSelect = document.getElementById('carSelect');
+    if (carSelect) {
+        carSelect.value = '';
+    }
+    
     selectedCar = null;
-    flatpickrInstance.clear();
+    
+    if (flatpickrInstance) {
+        flatpickrInstance.clear();
+    }
+    
     editingReservationId = null;
     
     // Przywróć domyślny tekst przycisku
     const submitBtn = document.querySelector('.btn-submit');
-    submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Zatwierdź rezerwację';
+    if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Zatwierdź rezerwację';
+    }
+    
+    // Ukryj ewentualną wiadomość
+    const messageElement = document.getElementById('message');
+    if (messageElement) {
+        messageElement.style.display = 'none';
+    }
 }
 
 // Ładowanie danych z Google Sheets
 function loadDataFromGoogleSheets() {
     // Symulacja aktualizacji danych co 30 sekund
     setInterval(() => {
-        document.getElementById('lastUpdate').textContent = 
-            `Ostatnia aktualizacja: ${new Date().toLocaleString('pl-PL')}`;
+        const lastUpdateElement = document.getElementById('lastUpdate');
+        if (lastUpdateElement) {
+            lastUpdateElement.textContent = `Ostatnia aktualizacja: ${new Date().toLocaleString('pl-PL')}`;
+        }
     }, 30000);
 }
-
