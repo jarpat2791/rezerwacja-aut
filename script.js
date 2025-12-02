@@ -8,12 +8,12 @@ const VALID_USERS = [
 
 // Dane aut
 const CARS = [
-    { id: "Auto1", name: "Toyota Corolla", plate: "KR 12345" },
-    { id: "Auto2", name: "Volkswagen Passat", plate: "KR 23456" },
-    { id: "Auto3", name: "Skoda Octavia", plate: "KR 34567" },
-    { id: "Auto4", name: "Ford Focus", plate: "KR 45678" },
-    { id: "Auto5", name: "Opel Astra", plate: "KR 56789" },
-    { id: "Auto6", name: "Hyundai i30", plate: "KR 67890" }
+    { id: "Auto1", name: "Skoda Octavia 1", plate: "RZ 12345" },
+    { id: "Auto2", name: "Skoda Octavia 2", plate: "RZ 23456" },
+    { id: "Auto3", name: "Skoda Octavia 3", plate: "RZ 34567" },
+    { id: "Auto4", name: "Skoda Superb", plate: "RZ 45678" },
+    { id: "Auto5", name: "Hyundai Tucson 1", plate: "RZ 56789" },
+    { id: "Auto6", name: "Hyundai Tucson 2", plate: "RZ 67890" }
 ];
 
 // URL Google Apps Script (do zastąpienia własnym)
@@ -435,4 +435,5 @@ function loadDataFromGoogleSheets() {
         document.getElementById('lastUpdate').textContent = 
             `Ostatnia aktualizacja: ${new Date().toLocaleString('pl-PL')}`;
     }, 30000);
+
 }
