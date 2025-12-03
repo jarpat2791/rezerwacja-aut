@@ -3,646 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zarządzanie Rezerwacjami Aut Służbowych</title>
+    <title>Zarządzanie rezerwacjami - Administrator</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .simple-management {
-            padding: 20px;
-        }
-        
-        .simple-filters {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .filter-row {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 15px;
-        }
-        
-        .filter-group {
-            flex: 1;
-            min-width: 200px;
-        }
-        
-        .filter-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .filter-group select,
-        .filter-group input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        
-        .filter-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .simple-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .simple-table th {
-            background: #2c3e50;
-            color: white;
-            padding: 12px;
-            text-align: left;
-            font-weight: 600;
-        }
-        
-        .simple-table td {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .simple-table tr:hover {
-            background: #f9f9f9;
-        }
-        
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .status-active {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .status-cancelled {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        
-        .export-buttons {
-            margin: 20px 0;
-            display: flex;
-            gap: 10px;
-        }
-        
-        .no-data {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-            font-style: italic;
-        }
-        
-        .reservation-count {
-            margin: 15px 0;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        @media (max-width: 768px) {
-            .filter-row {
-                flex-direction: column;
-            }
-            
-            .simple-table {
-                display: block;
-                overflow-x: auto;
-            }
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-car"></i> Zarządzanie Rezerwacjami Aut</h1>
+            <h1><i class="fas fa-calendar-alt"></i> Zarządzanie rezerwacjami aut służbowych</h1>
             <div class="user-info">
-                <span id="userDisplay">Zalogowany: <span id="username"></span></span>
-                <a href="index.html" class="btn-admin" style="background: #3498db; margin-left: 10px;">
-                    <i class="fas fa-home"></i> Strona główna
-                </a>
-                <button id="logoutBtn" class="btn-logout">
-                    <i class="fas fa-sign-out-alt"></i> Wyloguj
+                <span id="userDisplay">Administrator</span>
+                <button onclick="window.location.href='index.html'" class="btn-logout">
+                    <i class="fas fa-arrow-left"></i> Powrót
                 </button>
             </div>
         </header>
         
         <main>
-            <div class="simple-management">
-                <h2><i class="fas fa-list"></i> Wszystkie rezerwacje</h2>
+            <div class="admin-section">
+                <h2><i class="fas fa-list-alt"></i> Wszystkie rezerwacje</h2>
                 
-                <!-- Proste filtry -->
-                <div class="simple-filters">
+                <div class="filter-section">
                     <h3><i class="fas fa-filter"></i> Filtruj rezerwacje</h3>
-                    
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label for="filterCar">Auto:</label>
-                            <select id="filterCar">
+                    <div class="filter-group">
+                        <div class="filter-item">
+                            <label for="filterCar"><i class="fas fa-car"></i> Auto</label>
+                            <select id="filterCar" class="form-control">
                                 <option value="">Wszystkie auta</option>
-                                <option value="Auto1">Skoda Octavia 1</option>
-                                <option value="Auto2">Skoda Octavia 2</option>
-                                <option value="Auto3">Skoda Octavia 3</option>
-                                <option value="Auto4">Skoda Superb</option>
-                                <option value="Auto5">Hyundai Tucson 1</option>
-                                <option value="Auto6">Hyundai Tucson 2</option>
+                                <option value="Auto1">Skoda Octavia 1 (RZ 12345)</option>
+                                <option value="Auto2">Skoda Octavia 2 (RZ 23456)</option>
+                                <option value="Auto3">Skoda Octavia 3 (RZ 34567)</option>
+                                <option value="Auto4">Skoda Superb (RZ 45678)</option>
+                                <option value="Auto5">Hyundai Tucson 1 (RZ 56789)</option>
+                                <option value="Auto6">Hyundai Tucson 2 (RZ 67890)</option>
                             </select>
                         </div>
                         
-                        <div class="filter-group">
-                            <label for="filterStatus">Status:</label>
-                            <select id="filterStatus">
-                                <option value="">Wszystkie</option>
-                                <option value="active">Aktywne</option>
-                                <option value="cancelled">Anulowane</option>
-                            </select>
+                        <div class="filter-item">
+                            <label for="filterEmployee"><i class="fas fa-user"></i> Pracownik</label>
+                            <input type="text" id="filterEmployee" class="form-control" placeholder="Wpisz nazwisko...">
                         </div>
                         
-                        <div class="filter-group">
-                            <label for="filterEmployee">Pracownik:</label>
-                            <input type="text" id="filterEmployee" placeholder="Wpisz nazwisko...">
+                        <div class="filter-item">
+                            <label for="filterDateRange"><i class="fas fa-calendar"></i> Okres</label>
+                            <input type="text" id="filterDateRange" class="form-control" placeholder="Wybierz zakres dat...">
+                        </div>
+                        
+                        <div class="filter-actions">
+                            <button id="applyFilter" class="btn-filter">
+                                <i class="fas fa-search"></i> Filtruj
+                            </button>
+                            <button id="resetFilter" class="btn-reset">
+                                <i class="fas fa-redo"></i> Resetuj
+                            </button>
                         </div>
                     </div>
+                </div>
+                
+                <div class="reservations-list">
+                    <div class="table-responsive">
+                        <table class="reservation-list-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Auto</th>
+                                    <th>Pracownik</th>
+                                    <th>Okres rezerwacji</th>
+                                    <th>Cel wyjazdu</th>
+                                    <th>Status</th>
+                                    <th>Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reservationsTableBody">
+                                <!-- Rezerwacje będą ładowane dynamicznie -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="reservations-summary">
+                    <h3><i class="fas fa-chart-bar"></i> Podsumowanie</h3>
+                    <div id="summaryStats" class="summary-stats">
+                        <!-- Statystyki będą ładowane dynamicznie -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h3><i class="fas fa-info-circle"></i> Instrukcja zarządzania rezerwacjami</h3>
+                <div class="instructions">
+                    <h4><i class="fas fa-list-ol"></i> Dostępne akcje:</h4>
+                    <ol>
+                        <li><strong>Podgląd rezerwacji:</strong> Kliknij przycisk "Podgląd" aby zobaczyć szczegóły</li>
+                        <li><strong>Edycja rezerwacji:</strong> Kliknij przycisk "Edytuj" aby zmienić dane rezerwacji</li>
+                        <li><strong>Usunięcie rezerwacji:</strong> Kliknij przycisk "Usuń" aby usunąć rezerwację</li>
+                        <li><strong>Filtrowanie:</strong> Użyj filtrów aby znaleźć konkretne rezerwacje</li>
+                    </ol>
                     
-                    <div class="filter-buttons">
-                        <button id="applyFilters" class="btn-submit">
-                            <i class="fas fa-search"></i> Filtruj
-                        </button>
-                        <button id="resetFilters" class="btn-cancel">
-                            <i class="fas fa-redo"></i> Resetuj
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Liczba rezerwacji -->
-                <div class="reservation-count">
-                    Znaleziono rezerwacji: <span id="totalReservations">0</span>
-                </div>
-                
-                <!-- Przyciski eksportu -->
-                <div class="export-buttons">
-                    <button id="exportExcel" class="btn-admin" style="background: #27ae60;">
-                        <i class="fas fa-file-excel"></i> Eksportuj do Excel
-                    </button>
-                    <button id="exportPDF" class="btn-admin" style="background: #e74c3c;">
-                        <i class="fas fa-file-pdf"></i> Eksportuj do PDF
-                    </button>
-                </div>
-                
-                <!-- Tabela rezerwacji -->
-                <div class="table-responsive">
-                    <table class="simple-table" id="reservationsTable">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Auto</th>
-                                <th>Pracownik</th>
-                                <th>Dział</th>
-                                <th>Okres</th>
-                                <th>Cel</th>
-                                <th>Status</th>
-                                <th>Akcje</th>
-                            </tr>
-                        </thead>
-                        <tbody id="reservationsTableBody">
-                            <!-- Dane będą wstawiane przez JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Brak danych -->
-                <div id="noDataMessage" class="no-data" style="display: none;">
-                    <i class="fas fa-info-circle" style="font-size: 48px; margin-bottom: 15px; color: #ccc;"></i>
-                    <p>Brak rezerwacji spełniających kryteria wyszukiwania</p>
+                    <h4><i class="fas fa-exclamation-triangle"></i> Uwagi:</h4>
+                    <ul>
+                        <li>Usunięcie rezerwacji jest nieodwracalne</li>
+                        <li>Edycja rezerwacji może wpłynąć na dostępność auta dla innych pracowników</li>
+                        <li>Aktywne rezerwacje to te, które jeszcze się nie rozpoczęły lub trwają</li>
+                        <li>Zakończone rezerwacje są oznaczone na szaro</li>
+                    </ul>
                 </div>
             </div>
         </main>
         
         <footer>
-            <p>© 2025 System Rezerwacji Aut Służbowych | Wersja 1.0</p>
+            <p>© 2023 System Rezerwacji Aut Służbowych | Zarządzanie rezerwacjami</p>
             <p id="lastUpdate">Ostatnia aktualizacja: --</p>
         </footer>
     </div>
-
-    <!-- Modal potwierdzenia usunięcia -->
-    <div id="confirmModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-        <div style="background: white; padding: 30px; border-radius: 8px; max-width: 400px; width: 90%;">
-            <h3 style="margin-top: 0;"><i class="fas fa-exclamation-triangle"></i> Potwierdzenie</h3>
-            <p id="confirmMessage">Czy na pewno chcesz usunąć tę rezerwację?</p>
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button id="confirmYes" class="btn-submit">Tak, usuń</button>
-                <button id="confirmNo" class="btn-cancel">Anuluj</button>
+    
+    <!-- Modal do podglądu rezerwacji -->
+    <div id="reservationModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalReservationTitle">Szczegóły rezerwacji</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="reservationDetails">
+                    <!-- Szczegóły rezerwacji będą ładowane dynamicznie -->
+                </div>
             </div>
         </div>
     </div>
-
-    <script src="script.js"></script>
-    <script>
-        // UPROSZCZONY KOD ZARZĄDZANIA REZERWACJAMI
-        
-        let allReservations = [];
-        let filteredReservations = [];
-        let currentReservationToDelete = null;
-
-        // Inicjalizacja po załadowaniu strony
-        document.addEventListener('DOMContentLoaded', function() {
-            // Sprawdź czy użytkownik jest zalogowany
-            const user = getCurrentUser();
-            
-            if (!user) {
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            // Ustaw nazwę użytkownika
-            document.getElementById('username').textContent = user.name;
-            
-            // Załaduj rezerwacje
-            loadReservations();
-            
-            // Obsługa przycisków
-            document.getElementById('applyFilters').addEventListener('click', applyFilters);
-            document.getElementById('resetFilters').addEventListener('click', resetFilters);
-            document.getElementById('exportExcel').addEventListener('click', exportToExcel);
-            document.getElementById('exportPDF').addEventListener('click', exportToPDF);
-            document.getElementById('logoutBtn').addEventListener('click', function() {
-                clearCurrentUser();
-                window.location.href = 'login.html';
-            });
-            
-            // Obsługa modal potwierdzenia
-            document.getElementById('confirmYes').addEventListener('click', function() {
-                if (currentReservationToDelete) {
-                    deleteReservation(currentReservationToDelete);
-                }
-                hideConfirmModal();
-            });
-            
-            document.getElementById('confirmNo').addEventListener('click', hideConfirmModal);
-        });
-
-        // Ładowanie rezerwacji
-        function loadReservations() {
-            const savedReservations = localStorage.getItem('carReservations');
-            
-            if (savedReservations) {
-                allReservations = JSON.parse(savedReservations);
-                applyFilters(); // Zastosuj domyślne filtry
-            } else {
-                allReservations = [];
-                updateTable();
-            }
-            
-            updateLastUpdateTime();
-        }
-
-        // Zastosowanie filtrów
-        function applyFilters() {
-            const carFilter = document.getElementById('filterCar').value;
-            const statusFilter = document.getElementById('filterStatus').value;
-            const employeeFilter = document.getElementById('filterEmployee').value.toLowerCase();
-            
-            filteredReservations = allReservations.filter(reservation => {
-                // Filtruj po aucie
-                if (carFilter && reservation.carId !== carFilter) {
-                    return false;
-                }
-                
-                // Filtruj po statusie
-                if (statusFilter && reservation.status !== statusFilter) {
-                    return false;
-                }
-                
-                // Filtruj po pracowniku
-                if (employeeFilter && !reservation.employeeName.toLowerCase().includes(employeeFilter)) {
-                    return false;
-                }
-                
-                return true;
-            });
-            
-            // Sortuj od najnowszych
-            filteredReservations.sort((a, b) => {
-                const dateA = parseLocalDate(a.bookingDate || a.startDate);
-                const dateB = parseLocalDate(b.bookingDate || b.startDate);
-                return dateB - dateA;
-            });
-            
-            updateTable();
-        }
-
-        // Resetowanie filtrów
-        function resetFilters() {
-            document.getElementById('filterCar').value = '';
-            document.getElementById('filterStatus').value = '';
-            document.getElementById('filterEmployee').value = '';
-            applyFilters();
-        }
-
-        // Aktualizacja tabeli
-        function updateTable() {
-            const tableBody = document.getElementById('reservationsTableBody');
-            const totalElement = document.getElementById('totalReservations');
-            const noDataMessage = document.getElementById('noDataMessage');
-            
-            tableBody.innerHTML = '';
-            totalElement.textContent = filteredReservations.length;
-            
-            if (filteredReservations.length === 0) {
-                noDataMessage.style.display = 'block';
-                return;
-            }
-            
-            noDataMessage.style.display = 'none';
-            
-            filteredReservations.forEach(reservation => {
-                const row = document.createElement('tr');
-                
-                // Określ status
-                const statusClass = reservation.status === 'active' ? 'status-active' : 'status-cancelled';
-                const statusText = reservation.status === 'active' ? 'Aktywna' : 'Anulowana';
-                
-                // Znajdź nazwę auta
-                const car = CARS.find(c => c.id === reservation.carId);
-                const carName = car ? car.name : reservation.carId;
-                
-                // Formatuj daty
-                const startDate = formatDate(reservation.startDate);
-                const endDate = formatDate(reservation.endDate);
-                
-                row.innerHTML = `
-                    <td>${reservation.id.substring(0, 8)}</td>
-                    <td>${carName}</td>
-                    <td>${reservation.employeeName}</td>
-                    <td>${reservation.department}</td>
-                    <td>${startDate} - ${endDate}</td>
-                    <td title="${reservation.purpose}">${reservation.purpose.substring(0, 30)}${reservation.purpose.length > 30 ? '...' : ''}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    <td>
-                        <button class="btn-edit-small" onclick="editReservation('${reservation.id}')" title="Edytuj">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-delete-small" onclick="confirmDeleteReservation('${reservation.id}')" title="Usuń">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                
-                tableBody.appendChild(row);
-            });
-        }
-
-        // Edycja rezerwacji
-        function editReservation(reservationId) {
-            // Przekieruj do głównej strony z parametrem edycji
-            localStorage.setItem('editReservationId', reservationId);
-            window.location.href = 'index.html';
-        }
-
-        // Potwierdzenie usunięcia
-        function confirmDeleteReservation(reservationId) {
-            currentReservationToDelete = reservationId;
-            const reservation = allReservations.find(r => r.id === reservationId);
-            
-            if (reservation) {
-                document.getElementById('confirmMessage').textContent = 
-                    `Czy na pewno chcesz usunąć rezerwację auta ${reservation.carId} przez ${reservation.employeeName}?`;
-            }
-            
-            document.getElementById('confirmModal').style.display = 'flex';
-        }
-
-        // Ukryj modal potwierdzenia
-        function hideConfirmModal() {
-            document.getElementById('confirmModal').style.display = 'none';
-            currentReservationToDelete = null;
-        }
-
-        // Usuwanie rezerwacji
-        function deleteReservation(reservationId) {
-            const index = allReservations.findIndex(r => r.id === reservationId);
-            
-            if (index !== -1) {
-                allReservations.splice(index, 1);
-                
-                // Zapisz do localStorage
-                localStorage.setItem('carReservations', JSON.stringify(allReservations));
-                
-                // Odśwież listę
-                loadReservations();
-                
-                // Pokaż komunikat
-                showNotification('Rezerwacja została usunięta', 'success');
-            }
-            
-            hideConfirmModal();
-        }
-
-        // Eksport do Excel
-        function exportToExcel() {
-            if (filteredReservations.length === 0) {
-                showNotification('Brak danych do eksportu', 'warning');
-                return;
-            }
-            
-            // Nagłówki CSV
-            let csvContent = "ID,Auto,Pracownik,Dział,Data rozpoczęcia,Data zakończenia,Cel wyjazdu,Status\n";
-            
-            // Dane
-            filteredReservations.forEach(reservation => {
-                const car = CARS.find(c => c.id === reservation.carId);
-                const carName = car ? car.name : reservation.carId;
-                const statusText = reservation.status === 'active' ? 'Aktywna' : 'Anulowana';
-                
-                csvContent += `"${reservation.id}","${carName}","${reservation.employeeName}","${reservation.department}",`;
-                csvContent += `"${formatDate(reservation.startDate)}","${formatDate(reservation.endDate)}",`;
-                csvContent += `"${reservation.purpose}","${statusText}"\n`;
-            });
-            
-            // Utwórz i pobierz plik
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-            
-            link.setAttribute("href", url);
-            link.setAttribute("download", `rezerwacje_${new Date().toISOString().slice(0, 10)}.csv`);
-            link.style.visibility = 'hidden';
-            
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showNotification(`Wyeksportowano ${filteredReservations.length} rezerwacji do CSV`, 'success');
-        }
-
-        // Eksport do PDF
-        function exportToPDF() {
-            if (filteredReservations.length === 0) {
-                showNotification('Brak danych do eksportu', 'warning');
-                return;
-            }
-            
-            // Utwórz prosty HTML do eksportu
-            let htmlContent = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; }
-                        h1 { color: #333; text-align: center; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                        th { background-color: #f2f2f2; }
-                        .status-active { color: green; }
-                        .status-cancelled { color: red; }
-                    </style>
-                </head>
-                <body>
-                    <h1>Raport rezerwacji aut</h1>
-                    <p>Wygenerowano: ${new Date().toLocaleString('pl-PL')}</p>
-                    <p>Liczba rezerwacji: ${filteredReservations.length}</p>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Auto</th>
-                                <th>Pracownik</th>
-                                <th>Dział</th>
-                                <th>Okres</th>
-                                <th>Cel</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-            
-            filteredReservations.forEach(reservation => {
-                const car = CARS.find(c => c.id === reservation.carId);
-                const carName = car ? car.name : reservation.carId;
-                const statusClass = reservation.status === 'active' ? 'status-active' : 'status-cancelled';
-                const statusText = reservation.status === 'active' ? 'Aktywna' : 'Anulowana';
-                
-                htmlContent += `
-                    <tr>
-                        <td>${carName}</td>
-                        <td>${reservation.employeeName}</td>
-                        <td>${reservation.department}</td>
-                        <td>${formatDate(reservation.startDate)} - ${formatDate(reservation.endDate)}</td>
-                        <td>${reservation.purpose}</td>
-                        <td class="${statusClass}">${statusText}</td>
-                    </tr>
-                `;
-            });
-            
-            htmlContent += `
-                        </tbody>
-                    </table>
-                </body>
-                </html>
-            `;
-            
-            // Otwórz w nowym oknie do druku
-            const newWindow = window.open();
-            newWindow.document.write(htmlContent);
-            newWindow.document.close();
-            newWindow.focus();
-            newWindow.print();
-            
-            showNotification('Przygotowano raport do druku/PDF', 'success');
-        }
-
-        // Pokazanie powiadomienia
-        function showNotification(message, type = 'info') {
-            // Utwórz element powiadomienia
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 15px 20px;
-                background: ${type === 'success' ? '#4CAF50' : type === 'warning' ? '#ff9800' : '#2196F3'};
-                color: white;
-                border-radius: 4px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                z-index: 1000;
-                animation: slideIn 0.3s ease-out;
-            `;
-            
-            notification.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
-                <span style="margin-left: 10px;">${message}</span>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Automatyczne ukrycie po 5 sekundach
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.style.animation = 'slideOut 0.3s ease-out';
-                    setTimeout(() => {
-                        if (notification.parentNode) {
-                            document.body.removeChild(notification);
-                        }
-                    }, 300);
-                }
-            }, 5000);
-            
-            // Dodaj style animacji
-            if (!document.getElementById('notificationStyles')) {
-                const style = document.createElement('style');
-                style.id = 'notificationStyles';
-                style.textContent = `
-                    @keyframes slideIn {
-                        from { transform: translateX(100%); opacity: 0; }
-                        to { transform: translateX(0); opacity: 1; }
-                    }
-                    @keyframes slideOut {
-                        from { transform: translateX(0); opacity: 1; }
-                        to { transform: translateX(100%); opacity: 0; }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-        }
-
-        // Aktualizacja czasu ostatniej aktualizacji
-        function updateLastUpdateTime() {
-            const lastUpdateElement = document.getElementById('lastUpdate');
-            if (lastUpdateElement) {
-                lastUpdateElement.textContent = `Ostatnia aktualizacja: ${new Date().toLocaleString('pl-PL')}`;
-            }
-        }
-
-        // Funkcje pomocnicze z głównego skryptu
-        function formatDate(dateString) {
-            const date = parseLocalDate(dateString);
-            if (!date) return 'Nieprawidłowa data';
-            
-            return date.toLocaleDateString('pl-PL', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
-        }
-
-        // Eksport funkcji do globalnego zakresu
-        window.editReservation = editReservation;
-        window.confirmDeleteReservation = confirmDeleteReservation;
-        window.deleteReservation = deleteReservation;
-    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
+    <script src="reservations-management-script.js"></script>
 </body>
+
 </html>
