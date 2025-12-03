@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zarządzanie rezerwacjami - Administrator</title>
+    <title>Zarządzanie rezerwacjami aut służbowych</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -12,12 +12,18 @@
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-calendar-alt"></i> Zarządzanie rezerwacjami aut służbowych</h1>
+            <h1><i class="fas fa-car"></i> Zarządzanie Rezerwacjami Aut Służbowych</h1>
             <div class="user-info">
-                <span id="userDisplay">Administrator</span>
-                <button onclick="window.location.href='index.html'" class="btn-logout">
-                    <i class="fas fa-arrow-left"></i> Powrót
+                <span id="userDisplay">Zalogowany jako: <span id="username"></span></span>
+                <button id="logoutBtn" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Wyloguj
                 </button>
+                <a href="index.html" class="btn-admin" style="background: #3498db; margin-left: 10px;">
+                    <i class="fas fa-home"></i> Strona główna
+                </a>
+                <a href="admin.html" class="btn-admin" style="background: #2c3e50; margin-left: 10px;">
+                    <i class="fas fa-user-cog"></i> Panel administracyjny
+                </a>
             </div>
         </header>
         
@@ -25,12 +31,13 @@
             <div class="admin-section">
                 <h2><i class="fas fa-list-alt"></i> Wszystkie rezerwacje</h2>
                 
-                <div class="filter-section">
+                <!-- Filtry -->
+                <div class="filters-section">
                     <h3><i class="fas fa-filter"></i> Filtruj rezerwacje</h3>
-                    <div class="filter-group">
-                        <div class="filter-item">
-                            <label for="filterCar"><i class="fas fa-car"></i> Auto</label>
-                            <select id="filterCar" class="form-control">
+                    <div class="filters">
+                        <div class="filter-group">
+                            <label for="filterCar"><i class="fas fa-car"></i> Auto:</label>
+                            <select id="filterCar">
                                 <option value="">Wszystkie auta</option>
                                 <option value="Auto1">Skoda Octavia 1 (RZ 12345)</option>
                                 <option value="Auto2">Skoda Octavia 2 (RZ 23456)</option>
@@ -41,94 +48,217 @@
                             </select>
                         </div>
                         
-                        <div class="filter-item">
-                            <label for="filterEmployee"><i class="fas fa-user"></i> Pracownik</label>
-                            <input type="text" id="filterEmployee" class="form-control" placeholder="Wpisz nazwisko...">
+                        <div class="filter-group">
+                            <label for="filterStatus"><i class="fas fa-info-circle"></i> Status:</label>
+                            <select id="filterStatus">
+                                <option value="">Wszystkie statusy</option>
+                                <option value="active">Aktywne</option>
+                                <option value="cancelled">Anulowane</option>
+                                <option value="completed">Zakończone</option>
+                            </select>
                         </div>
                         
-                        <div class="filter-item">
-                            <label for="filterDateRange"><i class="fas fa-calendar"></i> Okres</label>
-                            <input type="text" id="filterDateRange" class="form-control" placeholder="Wybierz zakres dat...">
+                        <div class="filter-group">
+                            <label for="filterDate"><i class="fas fa-calendar"></i> Data:</label>
+                            <input type="text" id="filterDate" placeholder="Wybierz datę lub zakres">
                         </div>
                         
-                        <div class="filter-actions">
-                            <button id="applyFilter" class="btn-filter">
-                                <i class="fas fa-search"></i> Filtruj
-                            </button>
-                            <button id="resetFilter" class="btn-reset">
-                                <i class="fas fa-redo"></i> Resetuj
-                            </button>
+                        <div class="filter-group">
+                            <label for="filterEmployee"><i class="fas fa-user"></i> Pracownik:</label>
+                            <input type="text" id="filterEmployee" placeholder="Wpisz nazwisko">
+                        </div>
+                        
+                        <button id="applyFilters" class="btn-submit">
+                            <i class="fas fa-search"></i> Filtruj
+                        </button>
+                        <button id="resetFilters" class="btn-cancel">
+                            <i class="fas fa-redo"></i> Resetuj
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Statystyki -->
+                <div class="stats-section">
+                    <h3><i class="fas fa-chart-bar"></i> Statystyki</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #3498db;">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Aktywne rezerwacje</h4>
+                                <p id="activeCount">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #e74c3c;">
+                                <i class="fas fa-calendar-times"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Anulowane</h4>
+                                <p id="cancelledCount">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #2ecc71;">
+                                <i class="fas fa-car"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Aut z rezerwacjami</h4>
+                                <p id="carsWithReservations">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #f39c12;">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Aktywni użytkownicy</h4>
+                                <p id="activeUsers">0</p>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="reservations-list">
+                <!-- Lista rezerwacji -->
+                <div class="reservations-list-section">
+                    <h3><i class="fas fa-list"></i> Lista rezerwacji</h3>
+                    
+                    <div class="table-controls">
+                        <div class="table-actions">
+                            <button id="exportExcel" class="btn-admin" style="background: #27ae60;">
+                                <i class="fas fa-file-excel"></i> Eksportuj do Excel
+                            </button>
+                            <button id="exportPDF" class="btn-admin" style="background: #e74c3c;">
+                                <i class="fas fa-file-pdf"></i> Eksportuj do PDF
+                            </button>
+                            <button id="refreshList" class="btn-admin" style="background: #3498db;">
+                                <i class="fas fa-sync-alt"></i> Odśwież
+                            </button>
+                        </div>
+                        
+                        <div class="table-info">
+                            <p>Znaleziono: <span id="totalReservations">0</span> rezerwacji</p>
+                        </div>
+                    </div>
+                    
                     <div class="table-responsive">
-                        <table class="reservation-list-table">
+                        <table id="reservationsTable">
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Auto</th>
-                                    <th>Pracownik</th>
-                                    <th>Okres rezerwacji</th>
-                                    <th>Cel wyjazdu</th>
-                                    <th>Status</th>
-                                    <th>Akcje</th>
+                                    <th><i class="fas fa-car"></i> Auto</th>
+                                    <th><i class="fas fa-user"></i> Pracownik</th>
+                                    <th><i class="fas fa-building"></i> Dział</th>
+                                    <th><i class="fas fa-calendar"></i> Okres rezerwacji</th>
+                                    <th><i class="fas fa-clipboard-list"></i> Cel</th>
+                                    <th><i class="fas fa-info-circle"></i> Status</th>
+                                    <th><i class="fas fa-cogs"></i> Akcje</th>
                                 </tr>
                             </thead>
                             <tbody id="reservationsTableBody">
-                                <!-- Rezerwacje będą ładowane dynamicznie -->
+                                <!-- Dane będą wstawiane przez JavaScript -->
                             </tbody>
                         </table>
                     </div>
-                </div>
-                
-                <div class="reservations-summary">
-                    <h3><i class="fas fa-chart-bar"></i> Podsumowanie</h3>
-                    <div id="summaryStats" class="summary-stats">
-                        <!-- Statystyki będą ładowane dynamicznie -->
-                    </div>
-                </div>
-            </div>
-            
-            <div class="info-section">
-                <h3><i class="fas fa-info-circle"></i> Instrukcja zarządzania rezerwacjami</h3>
-                <div class="instructions">
-                    <h4><i class="fas fa-list-ol"></i> Dostępne akcje:</h4>
-                    <ol>
-                        <li><strong>Podgląd rezerwacji:</strong> Kliknij przycisk "Podgląd" aby zobaczyć szczegóły</li>
-                        <li><strong>Edycja rezerwacji:</strong> Kliknij przycisk "Edytuj" aby zmienić dane rezerwacji</li>
-                        <li><strong>Usunięcie rezerwacji:</strong> Kliknij przycisk "Usuń" aby usunąć rezerwację</li>
-                        <li><strong>Filtrowanie:</strong> Użyj filtrów aby znaleźć konkretne rezerwacje</li>
-                    </ol>
                     
-                    <h4><i class="fas fa-exclamation-triangle"></i> Uwagi:</h4>
-                    <ul>
-                        <li>Usunięcie rezerwacji jest nieodwracalne</li>
-                        <li>Edycja rezerwacji może wpłynąć na dostępność auta dla innych pracowników</li>
-                        <li>Aktywne rezerwacje to te, które jeszcze się nie rozpoczęły lub trwają</li>
-                        <li>Zakończone rezerwacje są oznaczone na szaro</li>
-                    </ul>
+                    <!-- Paginacja -->
+                    <div class="pagination" id="pagination">
+                        <button id="prevPage" class="pagination-btn" disabled>
+                            <i class="fas fa-chevron-left"></i> Poprzednia
+                        </button>
+                        <div class="page-numbers" id="pageNumbers"></div>
+                        <button id="nextPage" class="pagination-btn">
+                            Następna <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </main>
         
         <footer>
-            <p>© 2023 System Rezerwacji Aut Służbowych | Zarządzanie rezerwacjami</p>
+            <p>© 2025 System Rezerwacji Aut Służbowych WFOŚIGW Rzeszów | Wersja 1.0</p>
             <p id="lastUpdate">Ostatnia aktualizacja: --</p>
         </footer>
     </div>
     
-    <!-- Modal do podglądu rezerwacji -->
-    <div id="reservationModal" class="modal hidden">
+    <!-- Modal do edycji rezerwacji -->
+    <div id="editModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalReservationTitle">Szczegóły rezerwacji</h3>
-                <button class="close-modal">&times;</button>
+                <h3><i class="fas fa-edit"></i> Edytuj rezerwację</h3>
+                <span class="close-modal">&times;</span>
             </div>
             <div class="modal-body">
-                <div id="reservationDetails">
-                    <!-- Szczegóły rezerwacji będą ładowane dynamicznie -->
+                <form id="editReservationForm">
+                    <input type="hidden" id="editReservationId">
+                    
+                    <div class="form-group">
+                        <label for="editEmployeeName"><i class="fas fa-user-tie"></i> Imię i nazwisko</label>
+                        <input type="text" id="editEmployeeName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editEmployeeDepartment"><i class="fas fa-building"></i> Dział</label>
+                        <input type="text" id="editEmployeeDepartment" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editCarSelect"><i class="fas fa-car"></i> Auto</label>
+                        <select id="editCarSelect" required>
+                            <option value="">-- Wybierz auto --</option>
+                            <option value="Auto1">Auto 1: Skoda Octavia 1 (RZ 12345)</option>
+                            <option value="Auto2">Auto 2: Skoda Octavia 2 (RZ 23456)</option>
+                            <option value="Auto3">Auto 3: Skoda Octavia 3 (RZ 34567)</option>
+                            <option value="Auto4">Auto 4: Skoda Superb (RZ 45678)</option>
+                            <option value="Auto5">Auto 5: Hyundai Tucson 1 (RZ 56789)</option>
+                            <option value="Auto6">Auto 6: Hyundai Tucson 2 (RZ 67890)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editReservationDates"><i class="fas fa-calendar-check"></i> Okres rezerwacji</label>
+                        <input type="text" id="editReservationDates" placeholder="Wybierz daty" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editPurpose"><i class="fas fa-clipboard-list"></i> Cel wyjazdu</label>
+                        <textarea id="editPurpose" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editStatus"><i class="fas fa-info-circle"></i> Status</label>
+                        <select id="editStatus">
+                            <option value="active">Aktywna</option>
+                            <option value="cancelled">Anulowana</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group modal-buttons">
+                        <button type="submit" class="btn-submit">
+                            <i class="fas fa-save"></i> Zapisz zmiany
+                        </button>
+                        <button type="button" class="btn-cancel close-modal">
+                            <i class="fas fa-times"></i> Anuluj
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal potwierdzenia -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content confirm-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-exclamation-triangle"></i> Potwierdzenie</h3>
+                <span class="close-confirm-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">Czy na pewno chcesz usunąć tę rezerwację?</p>
+                <div class="modal-buttons">
+                    <button id="confirmYes" class="btn-submit">Tak</button>
+                    <button id="confirmNo" class="btn-cancel close-confirm-modal">Nie</button>
                 </div>
             </div>
         </div>
@@ -136,7 +266,7 @@
     
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
-    <script src="reservations-management-script.js"></script>
+    <script src="script.js"></script>
+    <script src="reservations-management.js"></script>
 </body>
-
 </html>
